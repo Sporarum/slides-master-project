@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="generator" content="pandoc">
-  <meta name="author" content="Matt Bovel @LAMP/LARA, EPFL">
-  <meta name="dcterms.date" content="2022-06-28">
-  <title>Towards nicer slides</title>
+  <meta name="author" content="Quentin Bernet @LARA, EPFL">
+  <meta name="dcterms.date" content="2023-09-25">
+  <title>Syntax and Runtime Checks for Qualified Types in Scala 3</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
@@ -17,28 +17,35 @@
     }
     code{white-space: pre-wrap;}
     span.smallcaps{font-variant: small-caps;}
-    span.underline{text-decoration: underline;}
-    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
     div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
     ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
   </style>
   <link rel="stylesheet" href="https://unpkg.com/reveal.js@^4//dist/theme/white.css" id="theme">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.js"></script>
+  <script defer=""
+  src="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.js"></script>
   <script>document.addEventListener("DOMContentLoaded", function () {
-   var mathElements = document.getElementsByClassName("math");
-   var macros = [];
-   for (var i = 0; i < mathElements.length; i++) {
-    var texText = mathElements[i].firstChild;
-    if (mathElements[i].tagName == "SPAN") {
-     katex.render(texText.data, mathElements[i], {
-      displayMode: mathElements[i].classList.contains('display'),
-      throwOnError: false,
-      macros: macros,
-      fleqn: false
-     });
-  }}});
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
   </script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" />
+  <link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.1/styles/atom-one-light.min.css">
   <link rel="stylesheet" href="custom.css" />
 </head>
@@ -47,13 +54,97 @@
     <div class="slides">
 
 <section id="title-slide">
-  <h1 class="title">Towards nicer slides</h1>
-  <p class="author"><a href="mailto:matthieu@bovel.net">Matt Bovel</a> @<a href="https://www.epfl.ch/labs/lamp/">LAMP</a>/<a href="https://lara.epfl.ch/w/">LARA</a>, <a href="https://www.epfl.ch/fr/">EPFL</a></p>
-  <p class="date">June 28, 2022</p>
+  <h1 class="title">Syntax and Runtime Checks for Qualified Types in
+Scala 3</h1>
+  <p class="author"><a href="mailto:quentin.bernet@epfl.ch">Quentin
+Bernet</a> @<a href="https://lara.epfl.ch/w/">LARA</a>, <a
+href="https://www.epfl.ch/fr/">EPFL</a></p>
+  <p class="date">September 25, 2023</p>
 </section>
 
-<section id="markdown" class="slide level2">
-<h2>Markdown</h2>
+<section>
+<section id="introduction" class="title-slide slide level1">
+<h1>Introduction</h1>
+<!-- 
+Max ~25 slides
+1 min by slide
+Slides to the point
+commit html
+can make github page
+ -->
+<!-- 
+## What are terms ?
+
+These things:
+
+```scala {.numberLines}
+"Hello"
+
+1 + 1
+
+(x: Int) => -x
+
+{
+  def foo(x: Int) = -x
+  foo(42)
+}
+```
+
+## What are types ?
+
+These things:
+```scala {.numberLines}
+val exponent: Double = 2
+
+def exp(x: Double): Double = Math.pow(x, exponent)
+
+type Number = Int | Double
+
+type TypeConstructor[T] = List[T]
+```
+## Quiz
+
+Are the following terms or types ?
+
+``` {.numberLines}
+f
+g
+
+Letter
+Number
+```
+
+## Answers
+
+
+```scala {.numberLines}
+type f = Float
+val g = 'c'
+
+type Letter = Char
+val Number = 1000
+```
+
+What this teaches us:
+We can only know from context ! -->
+</section>
+<section id="what-are-qualified-types" class="slide level2">
+<h2>What are <em>qualified</em> types ?</h2>
+<p>More precise types, inspired by sets builders: <span
+class="math inline">\{x \in \mathbb{Z}\;|\;x &gt; 0\}</span></p>
+<pre class="scala numberLines"><code>type Pos = Int with _ &gt; 0
+4: Pos
+
+type NonEmptyString = String with s =&gt; !s.isEmpty
+&quot;Nilla Wafer Tophat Time&quot;: NonEmptyString
+
+type PoliteString = NonEmptyString with s =&gt;
+    s.head.isUpper &amp;&amp;
+    s.takeRight(6) == &quot;please&quot;
+&quot;Pass me the butter, please&quot;: PoliteString</code></pre>
+</section></section>
+<section id="markdown" class="title-slide slide level1">
+<h1>Markdown</h1>
 <ul>
 <li>Item 1</li>
 <li>Item 2</li>
@@ -64,29 +155,45 @@
 </ol>
 <p><em>Emphasis</em>, <strong>Strong</strong></p>
 </section>
-<section id="syntax-highlighting" class="slide level2">
-<h2>Syntax highlighting</h2>
+
+<section id="syntax-highlighting" class="title-slide slide level1">
+<h1>Syntax highlighting</h1>
 <pre class="scala"><code>val a = if true then 0 else 42
 transparent inline def hello() = ???
 case class Foo(val bar: Int)
 extension (o: Object) def baz() = ???</code></pre>
 <p>(Supports Scala 3 syntax!)</p>
 </section>
-<section id="latex" class="slide level2">
-<h2>LaTeX</h2>
+
+<section id="latex" class="title-slide slide level1">
+<h1>LaTeX</h1>
 <p><span class="math display">\phi = \frac{a}{b}</span></p>
 </section>
-<section id="slide-break" class="slide level2">
-<h2>Slide break</h2>
-<p>Can break to the next slide without a new heading using a Markdown section beak:</p>
+
+<section>
+<section id="slide-break" class="title-slide slide level1">
+<h1>Slide break</h1>
+<p>Can break to the next slide without a new heading using a Markdown
+section beak:</p>
 <pre><code>---</code></pre>
 </section>
 <section class="slide level2">
 
 <p>Second part.</p>
+</section></section>
+<section id="columns" class="title-slide slide level1">
+<h1>Columns</h1>
+<div class="columns">
+<div class="column">
+<p>Column 1 Content</p>
+</div><div class="column">
+<p>Column 2 Content</p>
+</div>
+</div>
 </section>
-<section id="fragments" class="slide level2">
-<h2>Fragments</h2>
+
+<section id="fragments" class="title-slide slide level1">
+<h1>Fragments</h1>
 <div class="fragment">
 <p>First thing</p>
 </div>
@@ -127,7 +234,7 @@ extension (o: Object) def baz() = ???</code></pre>
         progress: true,
 
         // Display the page number of the current slide
-        slideNumber: false,
+        slideNumber: true,
 
         // 'all', 'print', or 'speaker'
         showSlideNumber: 'all',
@@ -156,7 +263,7 @@ extension (o: Object) def baz() = ???</code></pre>
         disableLayout: false,
 
         // Vertical centering of slides
-        center: true,
+        center: false,
 
         // Enables touch navigation on devices with touch input
         touch: true,
@@ -168,7 +275,7 @@ extension (o: Object) def baz() = ???</code></pre>
         rtl: false,
 
         // see https://revealjs.com/vertical-slides/#navigation-mode
-        navigationMode: 'default',
+        navigationMode: 'linear',
 
         // Randomizes the order of slides each time the presentation loads
         shuffle: false,

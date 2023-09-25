@@ -1,4 +1,4 @@
-all: presentation.html presentation.pdf
+all: presentation.html
 
 %.html: %.md Makefile custom.css
 	docker run --rm --volume "`pwd`:/data" --user `id -u`:`id -g` pandoc/latex \
@@ -27,10 +27,6 @@ all: presentation.html presentation.pdf
 		-V navigationMode="linear" \
 		--slide-level=2 \
 
-%.pdf: %.html
-	docker run --rm --volume "`pwd`:/slides" --workdir="/slides" --user `id -u`:`id -g` astefanutti/decktape \
-		$< \
-		$@
 
 .PHONY: clean
 

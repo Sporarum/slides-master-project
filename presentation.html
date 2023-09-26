@@ -284,10 +284,10 @@ else
 <p>Transformation done at pattern matching phase</p>
 </aside>
 </section>
-<section id="pattern-guards-qualified-types" class="slide level2">
-<h2>Pattern guards &amp; qualified types</h2>
+<section id="pattern-guards" class="slide level2">
+<h2>Pattern guards</h2>
 <div class="columns">
-<div class="column">
+<div class="column" style="width:50%;">
 <pre class="scala"><code>case y: Int if
     0 &lt;= y &amp;&amp; y &lt; 10 =&gt;</code></pre>
 <div class="fragment">
@@ -296,11 +296,24 @@ else
   0 &lt;= y &amp;&amp; y &lt; 10
 }</code></pre>
 </div>
-</div><div class="column">
-<div class="fragment">
+</div><div class="column" style="width:50%;">
+<p><span style="color: white;"> Test </span></p>
+</div>
+</div>
+</section>
+<section id="pattern-guards-qualified-types" class="slide level2">
+<h2>Pattern guards &amp; qualified types</h2>
+<div class="columns">
+<div class="column" style="width:50%;">
+<pre class="scala"><code>case y: Int if
+    0 &lt;= y &amp;&amp; y &lt; 10 =&gt;</code></pre>
+<pre class="scala"><code>x.isInstanceOf[Int] &amp;&amp; {
+  val y = x.asInstanceOf[Int]
+  0 &lt;= y &amp;&amp; y &lt; 10
+}</code></pre>
+</div><div class="column" style="width:50%;">
 <pre class="scala"><code>case y: Int with
     0 &lt;= y &amp;&amp; y &lt; 10 =&gt;</code></pre>
-</div>
 <div class="fragment">
 <pre class="scala"><code>x.isInstanceOf[Int with y =&gt; 
     0 &lt;= y &amp;&amp; y &lt; 10]</code></pre>

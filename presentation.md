@@ -283,12 +283,11 @@ Transformation done at pattern matching phase
 
 :::
 
-
-## Pattern guards & qualified types
+## Pattern guards
 
 ::::: columns
 
-:::: column
+:::: {.column width="50%"}
 
 ```scala
 case y: Int if
@@ -305,14 +304,42 @@ x.isInstanceOf[Int] && {
 
 ::::
 
-:::: column
 
-::: fragment
+:::: {.column width="50%"}
+<span style="color: white;">
+Test
+</span>
+
+::::
+
+:::::
+
+## Pattern guards & qualified types
+
+::::: columns
+
+:::: {.column width="50%"}
+
+```scala
+case y: Int if
+    0 <= y && y < 10 =>
+```
+
+```scala
+x.isInstanceOf[Int] && {
+  val y = x.asInstanceOf[Int]
+  0 <= y && y < 10
+}
+```
+
+::::
+
+:::: {.column width="50%"}
+
 ```scala
 case y: Int with
     0 <= y && y < 10 =>
 ```
-:::
 
 ::: fragment
 ```scala

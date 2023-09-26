@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="generator" content="pandoc">
   <meta name="author" content="Quentin Bernet @LARA, EPFL">
-  <meta name="dcterms.date" content="2023-09-25">
+  <meta name="dcterms.date" content="2023-09-26">
   <title>Syntax and Runtime Checks for Qualified Types in Scala 3</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -59,12 +59,11 @@ Scala 3</h1>
   <p class="author"><a href="mailto:quentin.bernet@epfl.ch">Quentin
 Bernet</a> @<a href="https://lara.epfl.ch/w/">LARA</a>, <a
 href="https://www.epfl.ch/fr/">EPFL</a></p>
-  <p class="date">September 25, 2023</p>
+  <p class="date">September 26, 2023</p>
 </section>
 
-<section>
-<section id="introduction" class="title-slide slide level1">
-<h1>Introduction</h1>
+<section id="slides" class="title-slide slide level1">
+<h1>Slides</h1>
 <!-- 
 Max ~25 slides
 1 min by slide
@@ -72,6 +71,18 @@ Slides to the point
 commit html
 can make github page
  -->
+<p>These slides can be found at <a
+href="https://go.epfl.ch/QT-slides">go.epfl.ch/QT-slides</a>.</p>
+<p>The source code: <a
+href="https://github.com/Sporarum/slides-master-project">https://github.com/Sporarum/slides-master-project</a></p>
+</section>
+
+<section>
+<section id="introduction" class="title-slide slide level1">
+<h1>Introduction</h1>
+<aside class="notes">
+<p>Test</p>
+</aside>
 <!-- 
 ## What are terms ?
 
@@ -129,7 +140,7 @@ What this teaches us:
 We can only know from context ! -->
 </section>
 <section id="what-are-qualified-types" class="slide level2">
-<h2>What are <em>qualified</em> types ?</h2>
+<h2>What are qualified types ?</h2>
 <p>More precise types, inspired by sets builders: <span
 class="math inline">\{x \in \mathbb{Z}\;|\;x &gt; 0\}</span></p>
 <pre class="scala numberLines"><code>type Pos = Int with _ &gt; 0
@@ -142,6 +153,181 @@ type PoliteString = NonEmptyString with s =&gt;
     s.head.isUpper &amp;&amp;
     s.takeRight(6) == &quot;please&quot;
 &quot;Pass me the butter, please&quot;: PoliteString</code></pre>
+</section></section>
+<section>
+<section id="syntax" class="title-slide slide level1">
+<h1>Syntax</h1>
+
+</section>
+<section id="internal-representation" class="slide level2">
+<h2>Internal Representation</h2>
+<p>Currently:</p>
+<pre class="scala"><code>type Pos = Int @qualified[Int]((x: Int) =&gt; x &gt; 0)</code></pre>
+</section>
+<section id="unanimous" class="slide level2">
+<h2>Unanimous</h2>
+<pre class="scala"><code>type Trivial = Int with true
+type Empty   = Int with false
+
+def foo(x: Int with x &gt; 0, y: Int with y &gt; x): Int with x &gt; 0 = y - x</code></pre>
+<!-- ## This syntax ? -->
+</section>
+<section id="postfix-lambda" class="slide level2">
+<h2>Postfix Lambda</h2>
+<p>The syntax we’ll be using as a default</p>
+<pre class="scala"><code>type Pos = Int with _ &gt; 0
+// desugars to
+type Pos = Int with x =&gt; x &gt; 0
+
+type Digit = Int with x =&gt; 0 &lt;= x &amp;&amp; x &lt; 10</code></pre>
+</section>
+<section id="it" class="slide level2">
+<h2><code>it</code></h2>
+<pre class="scala"><code>type Pos = Int with it &gt; 0
+
+type Digit = Int with 0 &lt;= it &amp;&amp; it &lt; 10</code></pre>
+<p>In case nested qualifiers:</p>
+<pre class="scala"><code>it &lt; super.it + super.super.it</code></pre>
+</section>
+<section id="set-notation" class="slide level2">
+<h2>Set Notation</h2>
+<pre class="scala"><code>type Pos = {x: Int with x &gt; 0}
+
+type Digit = {x: Int with 0 &lt;= x &amp;&amp; x &lt; 10}</code></pre>
+</section>
+<section id="id" class="slide level2">
+<h2><code>id</code></h2>
+<pre class="scala"><code>type Alias = (x: Int)
+
+type Pos = (x: Int with x &gt; 0)
+// desugars to
+type Pos = (x$1: (x$2: Int) with x$2 &gt; 0)
+
+type Digit = (x: Int with 0 &lt;= x &amp;&amp; x &lt; 10)
+// desugars to
+type Digit = (x$1: (x$2: Int) with 0 &lt;= x$2 &amp;&amp; x$2 &lt; 10)</code></pre>
+</section>
+<section id="it-id" class="slide level2">
+<h2><code>it</code> &amp; <code>id</code></h2>
+<p>Nothing stops us from allowing both !</p>
+<p>Choosing which one is “true” depending on IR:</p>
+<ul>
+<li><code>it</code> if de Bruijn indices</li>
+<li><code>id</code> if identifiers</li>
+</ul>
+</section>
+<section id="keyword" class="slide level2">
+<h2>Keyword</h2>
+<p>Existing: <code>if</code>, <code>with</code></p>
+<p>Or new: <code>where</code></p>
+</section></section>
+<section>
+<section id="pattern-matching" class="title-slide slide level1">
+<h1>Pattern Matching</h1>
+
+</section>
+<section id="desugars-to-type-test-and-cast" class="slide level2">
+<h2>Desugars to type test and cast</h2>
+<div class="columns">
+<div class="column">
+<pre class="scala"><code>costlyCall() match
+  case i: Int =&gt;
+    i + 1
+
+  case s: String =&gt;
+    s.toUpperCase
+
+
+
+</code></pre>
+</div><div class="column">
+<pre class="scala"><code>val x = costlyCall()
+if x.isInstanceOf[Int] then
+  val i = x.asInstanceOf[Int]
+  i + 1
+else if x.isInstanceOf[String] then
+  val s = x.asInstanceOf[String]
+  s.toUpperCase
+else
+  throw new MatchError(x)</code></pre>
+</div>
+</div>
+<aside class="notes">
+<p>Transformation done at pattern matching phase</p>
+</aside>
+</section>
+<section id="for-pattern-guards" class="slide level2">
+<h2>For pattern guards</h2>
+<pre class="scala"><code>case y: Int if 0 &lt;= y &amp;&amp; y &lt; 10 =&gt;</code></pre>
+<div class="fragment">
+<pre class="scala"><code>x.isInstanceOf[Int] &amp;&amp; {
+  val y = x.asInstanceOf[Int]
+  0 &lt;= y &amp;&amp; y &lt; 10
+}</code></pre>
+</div>
+<div class="fragment">
+<pre class="scala"><code>x.isInstanceOf[Int] &amp;&amp; {
+  val y = x.asInstanceOf[Int]
+  0 &lt;= y &amp;&amp; y &lt; 10
+}</code></pre>
+</div>
+<aside class="notes">
+<p>Transformation done at erasure phase</p>
+</aside>
+</section>
+<section id="for-qualified-types" class="slide level2">
+<h2>For qualified types</h2>
+<pre class="scala"><code>case y: Int with 0 &lt;= y &amp;&amp; y &lt; 10 =&gt;</code></pre>
+<div class="fragment">
+<pre class="scala"><code>x.isInstanceOf[Int with y =&gt; 0 &lt;= y &amp;&amp; y &lt; 10]</code></pre>
+</div>
+<div class="fragment">
+<pre class="scala"><code>x.isInstanceOf[Int] &amp;&amp; {
+  val y = x.asInstanceOf[Int]
+  0 &lt;= y &amp;&amp; y &lt; 10
+}</code></pre>
+</div>
+<aside class="notes">
+<p>Transformation done at erasure phase</p>
+</aside>
+</section>
+<section id="example" class="slide level2">
+<h2>Example</h2>
+<pre class="scala"><code>def answer(x: Any): Either[String, String] =
+  x match
+    case s: PoliteString =&gt; Right(&quot;Of course !&quot;)
+    case _               =&gt; Left(&quot;Please be polite ...&quot;)
+
+type NonEmptyString = String with s =&gt; !s.isEmpty
+
+type PoliteString = NonEmptyString with s =&gt; s.head.isUpper &amp;&amp;
+                                             s.takeRight(6) == &quot;please&quot;</code></pre>
+</section>
+<section id="after-erasure" class="slide level2">
+<h2>After erasure</h2>
+<pre class="scala"><code>def answer(x: Object): scala.util.Either =
+  if
+    x1.isInstanceOf[String] &amp;&amp;
+    {
+      val _$1: String = x1.asInstanceOf[String]
+      !(_$1.isEmpty)
+    } &amp;&amp;
+    {
+      val s: String = x1.asInstanceOf[String]
+      s.head.isUpper &amp;&amp;
+      s.takeRight(6) == &quot;please&quot;
+    }
+  then
+    val s: String = x1.asInstanceOf[String]
+    return Right(&quot;Of course !&quot;)
+  
+  return Left(&quot;Please be polite ...&quot;)</code></pre>
+<aside class="notes">
+<p>This is simplified from the actual output</p>
+</aside>
+</section>
+<section id="implementation" class="slide level2">
+<h2>Implementation</h2>
 </section></section>
 <section id="markdown" class="title-slide slide level1">
 <h1>Markdown</h1>
@@ -158,7 +344,7 @@ type PoliteString = NonEmptyString with s =&gt;
 
 <section id="syntax-highlighting" class="title-slide slide level1">
 <h1>Syntax highlighting</h1>
-<pre class="scala"><code>val a = if true then 0 else 42
+<pre class="scala numberLines"><code>val a = if true then 0 else 42
 transparent inline def hello() = ???
 case class Foo(val bar: Int)
 extension (o: Object) def baz() = ???</code></pre>
@@ -217,11 +403,11 @@ section beak:</p>
       // https://revealjs.com/config/
       Reveal.initialize({
         // Display controls in the bottom right corner
-        controls: true,
+        controls: false,
 
         // Help the user learn the controls by providing hints, for example by
         // bouncing the down arrow when they first encounter a vertical slide
-        controlsTutorial: true,
+        controlsTutorial: false,
 
         // Determines where controls appear, "edges" or "bottom-right"
         controlsLayout: 'bottom-right',

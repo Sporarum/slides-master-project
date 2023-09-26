@@ -90,7 +90,7 @@ type Pos = Int with _ > 0
 4: Pos
 
 type NonEmptyString = String with s => !s.isEmpty
-"Nilla Wafer Tophat Time": NonEmptyString
+"nilla wafer top hat time": NonEmptyString
 
 type PoliteString = NonEmptyString with s =>
     s.head.isUpper &&
@@ -100,35 +100,62 @@ type PoliteString = NonEmptyString with s =>
 
 # Syntax
 
-## Internal Representation
+Elements:
 
-Currently:
+* Base type
+* Qualifier
+* Identifier
+
+Internal representation:
+
 ```scala
 type Pos = Int @qualified[Int]((x: Int) => x > 0)
 ```
 
 ## Unanimous
 
+Boolean expressions:
 ```scala
 type Trivial = Int with true
 type Empty   = Int with false
-
-def foo(x: Int with x > 0, y: Int with y > x): Int with x > 0 = y - x
 ```
 
-<!-- ## This syntax ? -->
+Available identifiers:
+```scala
+def foo(x: Int with x > 0, y: Int with y > x): Int = y - x
+```
+
+<!-- slide for this syntax -->
+
+::: notes
+
+But this doesn't work for the return type
+:::
 
 ## Postfix Lambda
 
-The syntax we'll be using as a default
-
 ```scala
-type Pos = Int with _ > 0
-// desugars to
+import scala.language.experimental.postfixLambda
+
 type Pos = Int with x => x > 0
+// or
+type Pos = Int with _ > 0
 
 type Digit = Int with x => 0 <= x && x < 10
 ```
+::: fragment
+But
+
+```scala
+(Int with x => x > 0) => (Int with y => y < 0) => Int
+```
+:::
+
+::: notes
+
+That's the syntax we've been using so far
+
+:::
 
 ## `it`
 
@@ -138,13 +165,21 @@ type Pos = Int with it > 0
 type Digit = Int with 0 <= it && it < 10
 ```
 
-In case nested qualifiers:
+::: fragment
+
+(Optional) If nested qualifiers:
 
 ```scala
 it < super.it + super.super.it
 ```
 
+:::
+
 ## Set Notation
+
+```scala
+import scala.language.experimental.setNotation
+```
 
 ```scala
 type Pos = {x: Int with x > 0}
@@ -152,42 +187,60 @@ type Pos = {x: Int with x > 0}
 type Digit = {x: Int with 0 <= x && x < 10}
 ```
 
+::: fragment
+
+But
+
+```scala
+(x: Int) => Int with x > 0
+(x: Int with x > 0) => Int with x > 0
+{x: Int with x > 0} => Int with x > 0
+```
+
+:::
+
 ## `id`
 
 ```scala
 type Alias = (x: Int)
 
+type Pos = (x: (y: Int) with y > 0)
+// or
 type Pos = (x: Int with x > 0)
-// desugars to
-type Pos = (x$1: (x$2: Int) with x$2 > 0)
 
 type Digit = (x: Int with 0 <= x && x < 10)
-// desugars to
-type Digit = (x$1: (x$2: Int) with 0 <= x$2 && x$2 < 10)
 ```
 
 ## `it` & `id`
 
 Nothing stops us from allowing both !
 
+For example:
+```scala
+type Pos = (x: Int with x > 0)
+// as
+type Pos = (x: (Int with it > 0) )
+
+type Pos = Int with it > 0
+// as
+type Pos = ( (it$1: Int) with it$1 > 0 )
+```
+
+::: notes
+
 Choosing which one is "true" depending on IR:
 
 * `it` if de Bruijn indices
 * `id` if identifiers
 
-## Keyword
-
-Existing: `if`, `with`
-
-Or new: `where`
-
+:::
 # Pattern Matching
 
-## Desugars to type test and cast
+## Is just syntactic sugar
 
-:::: columns
+::::: columns
 
-::: column
+:::: column
 ```scala
 costlyCall() match
   case i: Int =>
@@ -200,9 +253,11 @@ costlyCall() match
 
 
 ```
-:::
+::::
 
-::: column
+:::: column
+
+::: fragment
 
 ```scala
 val x = costlyCall()
@@ -220,6 +275,8 @@ else
 
 ::::
 
+:::::
+
 ::: notes
 
 Transformation done at pattern matching phase
@@ -227,10 +284,15 @@ Transformation done at pattern matching phase
 :::
 
 
-## For pattern guards
+## Pattern guards & qualified types
+
+::::: columns
+
+:::: column
 
 ```scala
-case y: Int if 0 <= y && y < 10 =>
+case y: Int if
+    0 <= y && y < 10 =>
 ```
 ::: fragment
 ```scala
@@ -238,6 +300,24 @@ x.isInstanceOf[Int] && {
   val y = x.asInstanceOf[Int]
   0 <= y && y < 10
 }
+```
+:::
+
+::::
+
+:::: column
+
+::: fragment
+```scala
+case y: Int with
+    0 <= y && y < 10 =>
+```
+:::
+
+::: fragment
+```scala
+x.isInstanceOf[Int with y => 
+    0 <= y && y < 10]
 ```
 :::
 ::: fragment
@@ -248,6 +328,11 @@ x.isInstanceOf[Int] && {
 }
 ```
 :::
+
+::::
+
+:::::
+
 
 ::: notes
 
@@ -255,35 +340,22 @@ Transformation done at erasure phase
 
 :::
 
-## For qualified types
+## Ducks
+
+If it quacks like a pattern guard, why not make it look like one:
 
 ```scala
-case y: Int with 0 <= y && y < 10 =>
+type Pos = Int if it > 0
+
+x match
+  case (x: Int) if x > 0 =>
+  case x: (Int if x > 0) =>
 ```
-::: fragment
-```scala
-x.isInstanceOf[Int with y => 0 <= y && y < 10]
-```
-:::
-::: fragment
-```scala
-x.isInstanceOf[Int] && {
-  val y = x.asInstanceOf[Int]
-  0 <= y && y < 10
-}
-```
-:::
 
-::: notes
-
-Transformation done at erasure phase
-
-:::
-
-## Example
+## Before
 
 ```scala
-def answer(x: Any): Either[String, String] =
+def answerRequest(x: Any): Either[String, String] =
   x match
     case s: PoliteString => Right("Of course !")
     case _               => Left("Please be polite ...")
@@ -294,7 +366,12 @@ type PoliteString = NonEmptyString with s => s.head.isUpper &&
                                              s.takeRight(6) == "please"
 ```
 
-## After erasure
+::: notes
+Draw your attention to `s.head`
+:::
+
+
+## After
 
 ```scala
 def answer(x: Object): scala.util.Either =
@@ -325,14 +402,23 @@ This is simplified from the actual output
 ## Implementation
 
 ```scala
-def transformTypeTest(expr: Tree, testType: Type, flagUnrelated: Boolean): Tree =
+def transformTypeTest(expr: Tree, testType: Type, ...): Tree =
   testType.dealiasKeepQualifyingAnnots match {
     ...
-    case refine.EventuallyQualifiedType(baseType, closureDef(qualifier: DefDef)) =>
+    case refine.EventuallyQualifiedType(baseType,
+                             closureDef(qualifier: DefDef)) =>
       evalOnce(expr) { e =>
-        // e.isInstanceOf[baseType] && qualifier(e.asInstanceOf[baseType])
-        transformTypeTest(e, baseType, flagUnrelated)
-          .and(BetaReduce(qualifier, List(List(e.asInstance(baseType)))))
+        transformTypeTest(e, baseType, flagUnrelated).and(
+          BetaReduce(qualifier, List(List(e.asInstance(baseType)))))
       }
     ...
 ```
+
+## Conclusion
+
+* 2 Implemented syntaxes:
+  postfix lambda and set notation
+* 1 proposed syntax:
+  `it` & `id`
+* Pattern matching:
+  frames qualified types are as a compiletime generalization of pattern guards

@@ -147,7 +147,7 @@ class="math inline">\{x \in \mathbb{Z}\;|\;x &gt; 0\}</span></p>
 4: Pos
 
 type NonEmptyString = String with s =&gt; !s.isEmpty
-&quot;Nilla Wafer Tophat Time&quot;: NonEmptyString
+&quot;nilla wafer top hat time&quot;: NonEmptyString
 
 type PoliteString = NonEmptyString with s =&gt;
     s.head.isUpper &amp;&amp;
@@ -157,77 +157,103 @@ type PoliteString = NonEmptyString with s =&gt;
 <section>
 <section id="syntax" class="title-slide slide level1">
 <h1>Syntax</h1>
-
-</section>
-<section id="internal-representation" class="slide level2">
-<h2>Internal Representation</h2>
-<p>Currently:</p>
+<p>Elements:</p>
+<ul>
+<li>Base type</li>
+<li>Qualifier</li>
+<li>Identifier</li>
+</ul>
+<p>Internal representation:</p>
 <pre class="scala"><code>type Pos = Int @qualified[Int]((x: Int) =&gt; x &gt; 0)</code></pre>
 </section>
 <section id="unanimous" class="slide level2">
 <h2>Unanimous</h2>
+<p>Boolean expressions:</p>
 <pre class="scala"><code>type Trivial = Int with true
-type Empty   = Int with false
-
-def foo(x: Int with x &gt; 0, y: Int with y &gt; x): Int with x &gt; 0 = y - x</code></pre>
-<!-- ## This syntax ? -->
+type Empty   = Int with false</code></pre>
+<p>Available identifiers:</p>
+<pre class="scala"><code>def foo(x: Int with x &gt; 0, y: Int with y &gt; x): Int = y - x</code></pre>
+<!-- slide for this syntax -->
+<aside class="notes">
+<p>But this doesn’t work for the return type</p>
+</aside>
 </section>
 <section id="postfix-lambda" class="slide level2">
 <h2>Postfix Lambda</h2>
-<p>The syntax we’ll be using as a default</p>
-<pre class="scala"><code>type Pos = Int with _ &gt; 0
-// desugars to
+<pre class="scala"><code>import scala.language.experimental.postfixLambda
+
 type Pos = Int with x =&gt; x &gt; 0
+// or
+type Pos = Int with _ &gt; 0
 
 type Digit = Int with x =&gt; 0 &lt;= x &amp;&amp; x &lt; 10</code></pre>
+<div class="fragment">
+<p>But</p>
+<pre class="scala"><code>(Int with x =&gt; x &gt; 0) =&gt; (Int with y =&gt; y &lt; 0) =&gt; Int</code></pre>
+</div>
+<aside class="notes">
+<p>That’s the syntax we’ve been using so far</p>
+</aside>
 </section>
 <section id="it" class="slide level2">
 <h2><code>it</code></h2>
 <pre class="scala"><code>type Pos = Int with it &gt; 0
 
 type Digit = Int with 0 &lt;= it &amp;&amp; it &lt; 10</code></pre>
-<p>In case nested qualifiers:</p>
+<div class="fragment">
+<p>(Optional) If nested qualifiers:</p>
 <pre class="scala"><code>it &lt; super.it + super.super.it</code></pre>
+</div>
 </section>
 <section id="set-notation" class="slide level2">
 <h2>Set Notation</h2>
+<pre class="scala"><code>import scala.language.experimental.setNotation</code></pre>
 <pre class="scala"><code>type Pos = {x: Int with x &gt; 0}
 
 type Digit = {x: Int with 0 &lt;= x &amp;&amp; x &lt; 10}</code></pre>
+<div class="fragment">
+<p>But</p>
+<pre class="scala"><code>(x: Int) =&gt; Int with x &gt; 0
+(x: Int with x &gt; 0) =&gt; Int with x &gt; 0
+{x: Int with x &gt; 0} =&gt; Int with x &gt; 0</code></pre>
+</div>
 </section>
 <section id="id" class="slide level2">
 <h2><code>id</code></h2>
 <pre class="scala"><code>type Alias = (x: Int)
 
+type Pos = (x: (y: Int) with y &gt; 0)
+// or
 type Pos = (x: Int with x &gt; 0)
-// desugars to
-type Pos = (x$1: (x$2: Int) with x$2 &gt; 0)
 
-type Digit = (x: Int with 0 &lt;= x &amp;&amp; x &lt; 10)
-// desugars to
-type Digit = (x$1: (x$2: Int) with 0 &lt;= x$2 &amp;&amp; x$2 &lt; 10)</code></pre>
+type Digit = (x: Int with 0 &lt;= x &amp;&amp; x &lt; 10)</code></pre>
 </section>
 <section id="it-id" class="slide level2">
 <h2><code>it</code> &amp; <code>id</code></h2>
 <p>Nothing stops us from allowing both !</p>
+<p>For example:</p>
+<pre class="scala"><code>type Pos = (x: Int with x &gt; 0)
+// as
+type Pos = (x: (Int with it &gt; 0) )
+
+type Pos = Int with it &gt; 0
+// as
+type Pos = ( (it$1: Int) with it$1 &gt; 0 )</code></pre>
+<aside class="notes">
 <p>Choosing which one is “true” depending on IR:</p>
 <ul>
 <li><code>it</code> if de Bruijn indices</li>
 <li><code>id</code> if identifiers</li>
 </ul>
-</section>
-<section id="keyword" class="slide level2">
-<h2>Keyword</h2>
-<p>Existing: <code>if</code>, <code>with</code></p>
-<p>Or new: <code>where</code></p>
+</aside>
 </section></section>
 <section>
 <section id="pattern-matching" class="title-slide slide level1">
 <h1>Pattern Matching</h1>
 
 </section>
-<section id="desugars-to-type-test-and-cast" class="slide level2">
-<h2>Desugars to type test and cast</h2>
+<section id="is-just-syntactic-sugar" class="slide level2">
+<h2>Is just syntactic sugar</h2>
 <div class="columns">
 <div class="column">
 <pre class="scala"><code>costlyCall() match
@@ -241,6 +267,7 @@ type Digit = (x$1: (x$2: Int) with 0 &lt;= x$2 &amp;&amp; x$2 &lt; 10)</code></p
 
 </code></pre>
 </div><div class="column">
+<div class="fragment">
 <pre class="scala"><code>val x = costlyCall()
 if x.isInstanceOf[Int] then
   val i = x.asInstanceOf[Int]
@@ -252,48 +279,56 @@ else
   throw new MatchError(x)</code></pre>
 </div>
 </div>
+</div>
 <aside class="notes">
 <p>Transformation done at pattern matching phase</p>
 </aside>
 </section>
-<section id="for-pattern-guards" class="slide level2">
-<h2>For pattern guards</h2>
-<pre class="scala"><code>case y: Int if 0 &lt;= y &amp;&amp; y &lt; 10 =&gt;</code></pre>
+<section id="pattern-guards-qualified-types" class="slide level2">
+<h2>Pattern guards &amp; qualified types</h2>
+<div class="columns">
+<div class="column">
+<pre class="scala"><code>case y: Int if
+    0 &lt;= y &amp;&amp; y &lt; 10 =&gt;</code></pre>
 <div class="fragment">
 <pre class="scala"><code>x.isInstanceOf[Int] &amp;&amp; {
   val y = x.asInstanceOf[Int]
   0 &lt;= y &amp;&amp; y &lt; 10
 }</code></pre>
 </div>
+</div><div class="column">
+<div class="fragment">
+<pre class="scala"><code>case y: Int with
+    0 &lt;= y &amp;&amp; y &lt; 10 =&gt;</code></pre>
+</div>
+<div class="fragment">
+<pre class="scala"><code>x.isInstanceOf[Int with y =&gt; 
+    0 &lt;= y &amp;&amp; y &lt; 10]</code></pre>
+</div>
 <div class="fragment">
 <pre class="scala"><code>x.isInstanceOf[Int] &amp;&amp; {
   val y = x.asInstanceOf[Int]
   0 &lt;= y &amp;&amp; y &lt; 10
 }</code></pre>
+</div>
+</div>
 </div>
 <aside class="notes">
 <p>Transformation done at erasure phase</p>
 </aside>
 </section>
-<section id="for-qualified-types" class="slide level2">
-<h2>For qualified types</h2>
-<pre class="scala"><code>case y: Int with 0 &lt;= y &amp;&amp; y &lt; 10 =&gt;</code></pre>
-<div class="fragment">
-<pre class="scala"><code>x.isInstanceOf[Int with y =&gt; 0 &lt;= y &amp;&amp; y &lt; 10]</code></pre>
-</div>
-<div class="fragment">
-<pre class="scala"><code>x.isInstanceOf[Int] &amp;&amp; {
-  val y = x.asInstanceOf[Int]
-  0 &lt;= y &amp;&amp; y &lt; 10
-}</code></pre>
-</div>
-<aside class="notes">
-<p>Transformation done at erasure phase</p>
-</aside>
+<section id="ducks" class="slide level2">
+<h2>Ducks</h2>
+<p>If it quacks like a pattern guard, why not make it look like one:</p>
+<pre class="scala"><code>type Pos = Int if it &gt; 0
+
+x match
+  case (x: Int) if x &gt; 0 =&gt;
+  case x: (Int if x &gt; 0) =&gt;</code></pre>
 </section>
-<section id="example" class="slide level2">
-<h2>Example</h2>
-<pre class="scala"><code>def answer(x: Any): Either[String, String] =
+<section id="before" class="slide level2">
+<h2>Before</h2>
+<pre class="scala"><code>def answerRequest(x: Any): Either[String, String] =
   x match
     case s: PoliteString =&gt; Right(&quot;Of course !&quot;)
     case _               =&gt; Left(&quot;Please be polite ...&quot;)
@@ -302,9 +337,12 @@ type NonEmptyString = String with s =&gt; !s.isEmpty
 
 type PoliteString = NonEmptyString with s =&gt; s.head.isUpper &amp;&amp;
                                              s.takeRight(6) == &quot;please&quot;</code></pre>
+<aside class="notes">
+<p>Draw your attention to <code>s.head</code></p>
+</aside>
 </section>
-<section id="after-erasure" class="slide level2">
-<h2>After erasure</h2>
+<section id="after" class="slide level2">
+<h2>After</h2>
 <pre class="scala"><code>def answer(x: Object): scala.util.Either =
   if
     x1.isInstanceOf[String] &amp;&amp;
@@ -328,65 +366,26 @@ type PoliteString = NonEmptyString with s =&gt; s.head.isUpper &amp;&amp;
 </section>
 <section id="implementation" class="slide level2">
 <h2>Implementation</h2>
-</section></section>
-<section id="markdown" class="title-slide slide level1">
-<h1>Markdown</h1>
+<pre class="scala"><code>def transformTypeTest(expr: Tree, testType: Type, ...): Tree =
+  testType.dealiasKeepQualifyingAnnots match {
+    ...
+    case refine.EventuallyQualifiedType(baseType,
+                             closureDef(qualifier: DefDef)) =&gt;
+      evalOnce(expr) { e =&gt;
+        transformTypeTest(e, baseType, flagUnrelated).and(
+          BetaReduce(qualifier, List(List(e.asInstance(baseType)))))
+      }
+    ...</code></pre>
+</section>
+<section id="conclusion" class="slide level2">
+<h2>Conclusion</h2>
 <ul>
-<li>Item 1</li>
-<li>Item 2</li>
+<li>2 Implemented syntaxes: postfix lambda and set notation</li>
+<li>1 proposed syntax: <code>it</code> &amp; <code>id</code></li>
+<li>Pattern matching: frames qualified types are as a compiletime
+generalization of pattern guards</li>
 </ul>
-<ol type="1">
-<li>Item 1</li>
-<li>Item 2</li>
-</ol>
-<p><em>Emphasis</em>, <strong>Strong</strong></p>
-</section>
-
-<section id="syntax-highlighting" class="title-slide slide level1">
-<h1>Syntax highlighting</h1>
-<pre class="scala numberLines"><code>val a = if true then 0 else 42
-transparent inline def hello() = ???
-case class Foo(val bar: Int)
-extension (o: Object) def baz() = ???</code></pre>
-<p>(Supports Scala 3 syntax!)</p>
-</section>
-
-<section id="latex" class="title-slide slide level1">
-<h1>LaTeX</h1>
-<p><span class="math display">\phi = \frac{a}{b}</span></p>
-</section>
-
-<section>
-<section id="slide-break" class="title-slide slide level1">
-<h1>Slide break</h1>
-<p>Can break to the next slide without a new heading using a Markdown
-section beak:</p>
-<pre><code>---</code></pre>
-</section>
-<section class="slide level2">
-
-<p>Second part.</p>
 </section></section>
-<section id="columns" class="title-slide slide level1">
-<h1>Columns</h1>
-<div class="columns">
-<div class="column">
-<p>Column 1 Content</p>
-</div><div class="column">
-<p>Column 2 Content</p>
-</div>
-</div>
-</section>
-
-<section id="fragments" class="title-slide slide level1">
-<h1>Fragments</h1>
-<div class="fragment">
-<p>First thing</p>
-</div>
-<div class="fragment">
-<p>Second thing</p>
-</div>
-</section>
     </div>
   </div>
 

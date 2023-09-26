@@ -27,6 +27,8 @@ all: presentation.html
 		-V slideNumber \
 		-V navigationMode="linear" \
 		--slide-level=2 \
+		-V controls="false" \
+		-V controlsTutorial="false" \
 
 
 .PHONY: clean

@@ -97,7 +97,7 @@ code {
 }
 
 .reveal .slides section .fragment {
-    opacity: 0.25;
+    opacity: 0;
     visibility: visible;
 }
 

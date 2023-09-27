@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="generator" content="pandoc">
   <meta name="author" content="Quentin Bernet @LARA, EPFL">
-  <meta name="dcterms.date" content="2023-09-26">
+  <meta name="dcterms.date" content="2023-09-27">
   <title>Syntax and Runtime Checks for Qualified Types in Scala 3</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -59,7 +59,7 @@ Scala 3</h1>
   <p class="author"><a href="mailto:quentin.bernet@epfl.ch">Quentin
 Bernet</a> @<a href="https://lara.epfl.ch/w/">LARA</a>, <a
 href="https://www.epfl.ch/fr/">EPFL</a></p>
-  <p class="date">September 26, 2023</p>
+  <p class="date">September 27, 2023</p>
 </section>
 
 <section id="slides" class="title-slide slide level1">
@@ -74,15 +74,15 @@ can make github page
 <p>These slides can be found at <a
 href="https://go.epfl.ch/QT-slides">go.epfl.ch/QT-slides</a>.</p>
 <p>The source code: <a
-href="https://github.com/Sporarum/slides-master-project">https://github.com/Sporarum/slides-master-project</a></p>
+href="https://github.com/Sporarum/slides-master-project">https://github.com/Sporarum/slides-master-project</a>.</p>
+<aside class="notes">
+<p>Please, questions at the end</p>
+</aside>
 </section>
 
 <section>
 <section id="introduction" class="title-slide slide level1">
 <h1>Introduction</h1>
-<aside class="notes">
-<p>Test</p>
-</aside>
 <!-- 
 ## What are terms ?
 
@@ -143,36 +143,59 @@ We can only know from context ! -->
 <h2>What are qualified types ?</h2>
 <p>More precise types, inspired by sets builders: <span
 class="math inline">\{x \in \mathbb{Z}\;|\;x &gt; 0\}</span></p>
+<div class="fragment">
 <pre class="scala numberLines"><code>type Pos = Int with _ &gt; 0
-4: Pos
-
-type NonEmptyString = String with s =&gt; !s.isEmpty
-&quot;nilla wafer top hat time&quot;: NonEmptyString
-
-type PoliteString = NonEmptyString with s =&gt;
+4: Pos</code></pre>
+</div>
+<div class="fragment">
+<pre class="scala"><code>type NonEmptyString = String with s =&gt; !s.isEmpty
+&quot;Nilla Wafer Top Hat Time&quot;: NonEmptyString</code></pre>
+</div>
+<div class="fragment">
+<pre class="scala"><code>type PoliteString = NonEmptyString with s =&gt;
     s.head.isUpper &amp;&amp;
     s.takeRight(6) == &quot;please&quot;
 &quot;Pass me the butter, please&quot;: PoliteString</code></pre>
+</div>
+</section>
+<section id="un-type-qualifié-cest-quoi" class="slide level2">
+<h2>Un type qualifié, c’est quoi ?</h2>
+<div class="columns">
+<div class="column" style="width:10%;">
+
+</div><div class="column" style="width:40%;">
+<div class="fragment">
+<p><img data-src="typeQualifie.PNG" class="center"
+style="width:100.0%" /></p>
+</div>
+</div><div class="column" style="width:10%;">
+
+</div>
+</div>
 </section></section>
 <section>
 <section id="syntax" class="title-slide slide level1">
 <h1>Syntax</h1>
 <p>Elements:</p>
 <ul>
-<li>Base type</li>
-<li>Qualifier</li>
-<li>Identifier</li>
+<li>Base type (<code>String</code>)</li>
+<li>Qualifier (<code>!s.isEmpty</code>)</li>
+<li>Identifier (<code>s</code>)</li>
 </ul>
+<div class="fragment">
 <p>Internal representation:</p>
 <pre class="scala"><code>type Pos = Int @qualified[Int]((x: Int) =&gt; x &gt; 0)</code></pre>
+</div>
 </section>
 <section id="unanimous" class="slide level2">
 <h2>Unanimous</h2>
 <p>Boolean expressions:</p>
 <pre class="scala"><code>type Trivial = Int with true
 type Empty   = Int with false</code></pre>
+<div class="fragment">
 <p>Available identifiers:</p>
 <pre class="scala"><code>def foo(x: Int with x &gt; 0, y: Int with y &gt; x): Int = y - x</code></pre>
+</div>
 <!-- slide for this syntax -->
 <aside class="notes">
 <p>But this doesn’t work for the return type</p>
@@ -207,8 +230,9 @@ type Digit = Int with 0 &lt;= it &amp;&amp; it &lt; 10</code></pre>
 </section>
 <section id="set-notation" class="slide level2">
 <h2>Set Notation</h2>
-<pre class="scala"><code>import scala.language.experimental.setNotation</code></pre>
-<pre class="scala"><code>type Pos = {x: Int with x &gt; 0}
+<pre class="scala"><code>import scala.language.experimental.setNotation
+
+type Pos = {x: Int with x &gt; 0}
 
 type Digit = {x: Int with 0 &lt;= x &amp;&amp; x &lt; 10}</code></pre>
 <div class="fragment">
@@ -220,25 +244,29 @@ type Digit = {x: Int with 0 &lt;= x &amp;&amp; x &lt; 10}</code></pre>
 </section>
 <section id="id" class="slide level2">
 <h2><code>id</code></h2>
-<pre class="scala"><code>type Alias = (x: Int)
-
-type Pos = (x: (y: Int) with y &gt; 0)
-// or
-type Pos = (x: Int with x &gt; 0)
+<pre class="scala"><code>type Alias = (x: Int)</code></pre>
+<div class="fragment">
+<pre class="scala"><code>type Pos = (x: (y: Int) with y &gt; 0)</code></pre>
+</div>
+<div class="fragment">
+<pre class="scala"><code>type Pos = (x: Int with x &gt; 0)
 
 type Digit = (x: Int with 0 &lt;= x &amp;&amp; x &lt; 10)</code></pre>
+</div>
 </section>
 <section id="it-id" class="slide level2">
 <h2><code>it</code> &amp; <code>id</code></h2>
 <p>Nothing stops us from allowing both !</p>
-<p>For example:</p>
+<div class="fragment">
 <pre class="scala"><code>type Pos = (x: Int with x &gt; 0)
 // as
-type Pos = (x: (Int with it &gt; 0) )
-
-type Pos = Int with it &gt; 0
+type Pos = (x: (Int with it &gt; 0))</code></pre>
+</div>
+<div class="fragment">
+<pre class="scala"><code>type Pos = Int with it &gt; 0
 // as
-type Pos = ( (it$1: Int) with it$1 &gt; 0 )</code></pre>
+type Pos = (it$1: Int) with it$1 &gt; 0</code></pre>
+</div>
 <aside class="notes">
 <p>Choosing which one is “true” depending on IR:</p>
 <ul>
@@ -344,19 +372,20 @@ x match
 <pre class="scala"><code>def answerRequest(x: Any): Either[String, String] =
   x match
     case s: PoliteString =&gt; Right(&quot;Of course !&quot;)
-    case _               =&gt; Left(&quot;Please be polite ...&quot;)
-
-type NonEmptyString = String with s =&gt; !s.isEmpty
+    case _               =&gt; Left(&quot;Please be polite ...&quot;)</code></pre>
+<div class="fragment">
+<pre class="scala"><code>type NonEmptyString = String with s =&gt; !s.isEmpty
 
 type PoliteString = NonEmptyString with s =&gt; s.head.isUpper &amp;&amp;
                                              s.takeRight(6) == &quot;please&quot;</code></pre>
+</div>
 <aside class="notes">
 <p>Draw your attention to <code>s.head</code></p>
 </aside>
 </section>
 <section id="after" class="slide level2">
 <h2>After</h2>
-<pre class="scala"><code>def answer(x: Object): scala.util.Either =
+<pre class="scala"><code>def answerRequest(x: Object): scala.util.Either =
   if
     x1.isInstanceOf[String] &amp;&amp;
     {
@@ -389,15 +418,71 @@ type PoliteString = NonEmptyString with s =&gt; s.head.isUpper &amp;&amp;
           BetaReduce(qualifier, List(List(e.asInstance(baseType)))))
       }
     ...</code></pre>
-</section>
-<section id="conclusion" class="slide level2">
-<h2>Conclusion</h2>
+</section></section>
+<section id="conclusion" class="title-slide slide level1">
+<h1>Conclusion</h1>
 <ul>
 <li>2 Implemented syntaxes: postfix lambda and set notation</li>
 <li>1 proposed syntax: <code>it</code> &amp; <code>id</code></li>
 <li>Pattern matching: frames qualified types are as a compiletime
 generalization of pattern guards</li>
 </ul>
+</section>
+
+<section>
+<section id="extra-slides" class="title-slide slide level1">
+<h1>Extra Slides</h1>
+
+</section>
+<section id="irrefutability" class="slide level2">
+<h2>Irrefutability</h2>
+<pre class="scala"><code>type Pos = Int with x &gt; 0
+
+object Extractor:
+  def unapply(x: Pos): Some[Pos] = Some(x)
+
+-1 match
+  case Extractor(x) =&gt; x
+  case _ =&gt; None // warning: unreachable case</code></pre>
+</section>
+<section id="json-schema" class="slide level2">
+<h2>JSON schema</h2>
+<p>Works for both syntaxes:</p>
+<pre class="scala"><code>case class LongitudeAndLatitudeValues(
+  latitude: Double with -90 &lt;= latitude &amp;&amp; latitude &lt;= 90,
+  longitude: Double with -180 &lt;= longitude &amp;&amp; longitude &lt;= 180,
+  city: String with raw&quot;^[A-Za-z . ,&#39;-]+$$&quot;.r.matches(city)
+) extends Obj</code></pre>
+</section>
+<section id="tensor-postfix-lambda" class="slide level2">
+<h2>Tensor: Postfix Lambda</h2>
+<pre class="scala"><code>type Shape = List[Int with _ &gt; 0]
+
+extension (s: Shape)
+  def nbrElems = s.fold(1)(_ * _)
+  def reduce(axes: List[Int with x =&gt; s.indices.contains(x)]) = s.zipWithIndex.filter((_, i) =&gt; axes.contains(i)).map(_._1)
+
+trait Tensor[T]:
+  val shape: Shape
+  def sameShape(t: Tensor[T]): Boolean = shape.corresponds(t.shape)(_ == _)
+  def add(t: Tensor[T] with t.sameShape(this)): Tensor[T] with _.sameShape(this)
+  def mean(axes: List[Int with x =&gt; shape.indices.contains(x)]): Tensor[T] with _.shape == shape.reduce(axes)
+  def reshape(newShape: Shape with newShape.nbrElems == shape.nbrElems): Tensor[T] with _.shape == newShape</code></pre>
+</section>
+<section id="tensor-set-notation" class="slide level2">
+<h2>Tensor: Set Notation</h2>
+<pre class="scala"><code>type Shape = List[{x: Int with x &gt; 0}]
+
+extension (s: Shape)
+  def nbrElems = s.fold(1)(_ * _)
+  def reduce(axes: List[{x: Int with s.indices.contains(x)}]) = s.zipWithIndex.filter((_, i) =&gt; axes.contains(i)).map(_._1)
+
+trait Tensor[T]:
+  val shape: Shape
+  def sameShape(t: Tensor[T]): Boolean = shape.corresponds(t.shape)(_ == _)
+  def add(t: Tensor[T] with t.sameShape(this)): {res: Tensor[T] with res.sameShape(this)}
+  def mean(axes: List[{x: Int with shape.indices.contains(x)}]): {res: Tensor[T] with res.shape == shape.reduce(axes)}
+  def reshape(newShape: Shape with newShape.nbrElems == shape.nbrElems): {res: Tensor[T] with res.shape == newShape}</code></pre>
 </section></section>
     </div>
   </div>

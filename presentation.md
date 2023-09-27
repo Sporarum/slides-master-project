@@ -17,13 +17,13 @@ These slides can be found at [go.epfl.ch/QT-slides](https://go.epfl.ch/QT-slides
 
 The source code: [https://github.com/Sporarum/slides-master-project](https://github.com/Sporarum/slides-master-project).
 
-# Introduction
-
 ::: notes
 
-Test
+Please, questions at the end
 
 :::
+
+# Introduction
 
 <!-- 
 ## What are terms ?
@@ -489,7 +489,7 @@ def transformTypeTest(expr: Tree, testType: Type, ...): Tree =
     ...
 ```
 
-## Conclusion
+# Conclusion
 
 * 2 Implemented syntaxes:
   postfix lambda and set notation
@@ -497,3 +497,64 @@ def transformTypeTest(expr: Tree, testType: Type, ...): Tree =
   `it` & `id`
 * Pattern matching:
   frames qualified types are as a compiletime generalization of pattern guards
+
+# Extra Slides
+
+## Irrefutability
+
+```scala
+type Pos = Int with x > 0
+
+object Extractor:
+  def unapply(x: Pos): Some[Pos] = Some(x)
+
+-1 match
+  case Extractor(x) => x
+  case _ => None // warning: unreachable case
+```
+
+## JSON schema
+
+Works for both syntaxes:
+
+```scala
+case class LongitudeAndLatitudeValues(
+  latitude: Double with -90 <= latitude && latitude <= 90,
+  longitude: Double with -180 <= longitude && longitude <= 180,
+  city: String with raw"^[A-Za-z . ,'-]+$$".r.matches(city)
+) extends Obj
+```
+
+## Tensor: Postfix Lambda
+
+```scala
+type Shape = List[Int with _ > 0]
+
+extension (s: Shape)
+  def nbrElems = s.fold(1)(_ * _)
+  def reduce(axes: List[Int with x => s.indices.contains(x)]) = s.zipWithIndex.filter((_, i) => axes.contains(i)).map(_._1)
+
+trait Tensor[T]:
+  val shape: Shape
+  def sameShape(t: Tensor[T]): Boolean = shape.corresponds(t.shape)(_ == _)
+  def add(t: Tensor[T] with t.sameShape(this)): Tensor[T] with _.sameShape(this)
+  def mean(axes: List[Int with x => shape.indices.contains(x)]): Tensor[T] with _.shape == shape.reduce(axes)
+  def reshape(newShape: Shape with newShape.nbrElems == shape.nbrElems): Tensor[T] with _.shape == newShape
+```
+
+## Tensor: Set Notation
+
+```scala
+type Shape = List[{x: Int with x > 0}]
+
+extension (s: Shape)
+  def nbrElems = s.fold(1)(_ * _)
+  def reduce(axes: List[{x: Int with s.indices.contains(x)}]) = s.zipWithIndex.filter((_, i) => axes.contains(i)).map(_._1)
+
+trait Tensor[T]:
+  val shape: Shape
+  def sameShape(t: Tensor[T]): Boolean = shape.corresponds(t.shape)(_ == _)
+  def add(t: Tensor[T] with t.sameShape(this)): {res: Tensor[T] with res.sameShape(this)}
+  def mean(axes: List[{x: Int with shape.indices.contains(x)}]): {res: Tensor[T] with res.shape == shape.reduce(axes)}
+  def reshape(newShape: Shape with newShape.nbrElems == shape.nbrElems): {res: Tensor[T] with res.shape == newShape}
+```

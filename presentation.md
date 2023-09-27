@@ -15,7 +15,7 @@ can make github page
 
 These slides can be found at [go.epfl.ch/QT-slides](https://go.epfl.ch/QT-slides).
 
-The source code: [https://github.com/Sporarum/slides-master-project](https://github.com/Sporarum/slides-master-project)
+The source code: [https://github.com/Sporarum/slides-master-project](https://github.com/Sporarum/slides-master-project).
 
 # Introduction
 
@@ -85,32 +85,69 @@ We can only know from context ! -->
 
 More precise types, inspired by sets builders: $\{x \in \mathbb{Z}\;|\;x > 0\}$
 
+::: fragment
 ```scala {.numberLines}
 type Pos = Int with _ > 0
 4: Pos
-
+```
+:::
+::: fragment
+```scala
 type NonEmptyString = String with s => !s.isEmpty
-"nilla wafer top hat time": NonEmptyString
-
+"Nilla Wafer Top Hat Time": NonEmptyString
+```
+:::
+::: fragment
+```scala
 type PoliteString = NonEmptyString with s =>
     s.head.isUpper &&
     s.takeRight(6) == "please"
 "Pass me the butter, please": PoliteString
-``` 
+```
+:::
+
+## Un type qualifié, c'est quoi ?
+
+::::: columns
+
+:::: {.column width="10%"}
+
+::::
+
+
+:::: {.column width="40%"}
+
+
+::: fragment
+
+![](typeQualifie.PNG){ width=100% .center }
+
+:::
+
+::::
+
+:::: {.column width="10%"}
+
+
+::::
+
+:::::
 
 # Syntax
 
 Elements:
 
-* Base type
-* Qualifier
-* Identifier
+* Base type (`String`)
+* Qualifier (`!s.isEmpty`)
+* Identifier (`s`)
 
+::: fragment
 Internal representation:
 
 ```scala
 type Pos = Int @qualified[Int]((x: Int) => x > 0)
 ```
+:::
 
 ## Unanimous
 
@@ -120,10 +157,12 @@ type Trivial = Int with true
 type Empty   = Int with false
 ```
 
+::: fragment
 Available identifiers:
 ```scala
 def foo(x: Int with x > 0, y: Int with y > x): Int = y - x
 ```
+:::
 
 <!-- slide for this syntax -->
 
@@ -179,9 +218,7 @@ it < super.it + super.super.it
 
 ```scala
 import scala.language.experimental.setNotation
-```
 
-```scala
 type Pos = {x: Int with x > 0}
 
 type Digit = {x: Int with 0 <= x && x < 10}
@@ -203,29 +240,37 @@ But
 
 ```scala
 type Alias = (x: Int)
-
+```
+::: fragment
+```scala
 type Pos = (x: (y: Int) with y > 0)
-// or
+```
+:::
+::: fragment
+```scala
 type Pos = (x: Int with x > 0)
 
 type Digit = (x: Int with 0 <= x && x < 10)
 ```
-
+:::
 ## `it` & `id`
 
 Nothing stops us from allowing both !
 
-For example:
+::: fragment
 ```scala
 type Pos = (x: Int with x > 0)
 // as
-type Pos = (x: (Int with it > 0) )
-
+type Pos = (x: (Int with it > 0))
+```
+:::
+::: fragment
+```scala
 type Pos = Int with it > 0
 // as
-type Pos = ( (it$1: Int) with it$1 > 0 )
+type Pos = (it$1: Int) with it$1 > 0
 ```
-
+:::
 ::: notes
 
 Choosing which one is "true" depending on IR:
@@ -386,12 +431,15 @@ def answerRequest(x: Any): Either[String, String] =
   x match
     case s: PoliteString => Right("Of course !")
     case _               => Left("Please be polite ...")
-
+```
+::: fragment
+```scala
 type NonEmptyString = String with s => !s.isEmpty
 
 type PoliteString = NonEmptyString with s => s.head.isUpper &&
                                              s.takeRight(6) == "please"
 ```
+:::
 
 ::: notes
 Draw your attention to `s.head`
@@ -401,7 +449,7 @@ Draw your attention to `s.head`
 ## After
 
 ```scala
-def answer(x: Object): scala.util.Either =
+def answerRequest(x: Object): scala.util.Either =
   if
     x1.isInstanceOf[String] &&
     {

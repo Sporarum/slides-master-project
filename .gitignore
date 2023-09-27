@@ -3,4 +3,6 @@
 .scala-build
 target
 project
-.vscode
+.vscode/*
+!.vscode/settings.json
+output.log

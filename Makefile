@@ -1,5 +1,8 @@
 all: presentation.html
 
+# To `make` every time some files are saved look into
+# emeraldwalk.runonsave for VSCode
+
 %.html: %.md Makefile custom.css
 	docker run --rm --volume "`pwd`:/data" --user `id -u`:`id -g` pandoc/latex \
 		$< \

@@ -1,0 +1,11 @@
+{
+  "emeraldwalk.runonsave": {
+    "commands": [
+        {
+            "match": "(.*md)|(Makefile)|(settings.json)",
+            "isAsync": true,
+            "cmd": "make > output.log"
+        },
+    ]
+}
+}

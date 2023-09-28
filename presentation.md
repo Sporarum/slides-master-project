@@ -11,7 +11,10 @@ Max ~25 slides
 Slides to the point
 commit html
 can make github page
- -->
+
+Add _ example outside of Qual types
+Maybe "table of content" slide
+-->
 
 These slides can be found at [go.epfl.ch/QT-slides](https://go.epfl.ch/QT-slides).
 
@@ -20,6 +23,8 @@ The source code: [https://github.com/Sporarum/slides-master-project](https://git
 ::: notes
 
 Please, questions at the end
+
+except clarification questions
 
 :::
 
@@ -81,6 +86,10 @@ val Number = 1000
 What this teaches us:
 We can only know from context ! -->
 
+<!-- Add List[Pos] example -->
+
+<!-- So last week I wanted to be sure what it meant, so I went to google translate -->
+
 ## What are qualified types ?
 
 More precise types, inspired by sets builders: $\{x \in \mathbb{Z}\;|\;x > 0\}$
@@ -105,6 +114,10 @@ type PoliteString = NonEmptyString with s =>
 "Pass me the butter, please": PoliteString
 ```
 :::
+
+## Why not contracts
+
+
 
 ## Un type qualifié, c'est quoi ?
 
@@ -138,16 +151,16 @@ type PoliteString = NonEmptyString with s =>
 Elements:
 
 * Base type (`String`)
-* Qualifier (`!s.isEmpty`)
 * Identifier (`s`)
+* Qualifier (`!s.isEmpty`)
 
-::: fragment
+. . .
+
 Internal representation:
 
 ```scala
 type Pos = Int @qualified[Int]((x: Int) => x > 0)
 ```
-:::
 
 ## Unanimous
 
@@ -157,12 +170,13 @@ type Trivial = Int with true
 type Empty   = Int with false
 ```
 
-::: fragment
+. . .
+
 Available identifiers:
 ```scala
 def foo(x: Int with x > 0, y: Int with y > x): Int = y - x
 ```
-:::
+
 
 <!-- slide for this syntax -->
 
@@ -182,35 +196,18 @@ type Pos = Int with _ > 0
 
 type Digit = Int with x => 0 <= x && x < 10
 ```
-::: fragment
+
+. . .
+
 But
 
 ```scala
 (Int with x => x > 0) => (Int with y => y < 0) => Int
 ```
-:::
 
 ::: notes
 
 That's the syntax we've been using so far
-
-:::
-
-## `it`
-
-```scala
-type Pos = Int with it > 0
-
-type Digit = Int with 0 <= it && it < 10
-```
-
-::: fragment
-
-(Optional) If nested qualifiers:
-
-```scala
-it < super.it + super.super.it
-```
 
 :::
 
@@ -224,7 +221,7 @@ type Pos = {x: Int with x > 0}
 type Digit = {x: Int with 0 <= x && x < 10}
 ```
 
-::: fragment
+. . .
 
 But
 
@@ -234,43 +231,67 @@ But
 {x: Int with x > 0} => Int with x > 0
 ```
 
-:::
+<!-- What if we just added an identifier which always refers to the base type -->
+
+## `it`
+
+```scala
+type Pos = Int with it > 0
+
+type Digit = Int with 0 <= it && it < 10
+```
+
+. . .
+
+(Optional) If nested qualifiers:
+
+<!-- Add example where that is useful -->
+```scala
+it < super.it + super.super.it
+```
+
+<!-- What if we just allowed any type to have an identifier in front -->
 
 ## `id`
 
 ```scala
 type Alias = (x: Int)
 ```
-::: fragment
+
+. . .
+
 ```scala
 type Pos = (x: (y: Int) with y > 0)
 ```
-:::
-::: fragment
+
+. . .
+
 ```scala
 type Pos = (x: Int with x > 0)
 
 type Digit = (x: Int with 0 <= x && x < 10)
 ```
-:::
+
 ## `it` & `id`
 
 Nothing stops us from allowing both !
 
-::: fragment
+. . .
+
 ```scala
 type Pos = (x: Int with x > 0)
 // as
 type Pos = (x: (Int with it > 0))
 ```
-:::
-::: fragment
+
+. . .
+
 ```scala
 type Pos = Int with it > 0
 // as
 type Pos = (it$1: Int) with it$1 > 0
 ```
-:::
+
 ::: notes
 
 Choosing which one is "true" depending on IR:
@@ -405,6 +426,7 @@ x.isInstanceOf[Int] && {
 
 :::::
 
+<!-- Either exaplain why this similarity is not exact, or not mention it -->
 
 ::: notes
 
@@ -412,6 +434,7 @@ Transformation done at erasure phase
 
 :::
 
+<!-- Needs more transition until this -->
 ## Ducks
 
 If it quacks like a pattern guard, why not make it look like one:
@@ -432,14 +455,15 @@ def answerRequest(x: Any): Either[String, String] =
     case s: PoliteString => Right("Of course !")
     case _               => Left("Please be polite ...")
 ```
-::: fragment
+
+. . .
+
 ```scala
 type NonEmptyString = String with s => !s.isEmpty
 
 type PoliteString = NonEmptyString with s => s.head.isUpper &&
                                              s.takeRight(6) == "please"
 ```
-:::
 
 ::: notes
 Draw your attention to `s.head`

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="generator" content="pandoc">
   <meta name="author" content="Quentin Bernet @LARA, EPFL">
-  <meta name="dcterms.date" content="2023-09-27">
+  <meta name="dcterms.date" content="2023-09-28">
   <title>Syntax and Runtime Checks for Qualified Types in Scala 3</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -59,91 +59,42 @@ Scala 3</h1>
   <p class="author"><a href="mailto:quentin.bernet@epfl.ch">Quentin
 Bernet</a> @<a href="https://lara.epfl.ch/w/">LARA</a>, <a
 href="https://www.epfl.ch/fr/">EPFL</a></p>
-  <p class="date">September 27, 2023</p>
+  <p class="date">September 28, 2023</p>
 </section>
 
 <section id="slides" class="title-slide slide level1">
 <h1>Slides</h1>
-<!-- 
-Max ~25 slides
-1 min by slide
-Slides to the point
-commit html
-can make github page
-
-Add _ example outside of Qual types
-Maybe "table of content" slide
--->
 <p>These slides can be found at <a
 href="https://go.epfl.ch/QT-slides">go.epfl.ch/QT-slides</a>.</p>
-<p>The source code: <a
-href="https://github.com/Sporarum/slides-master-project">https://github.com/Sporarum/slides-master-project</a>.</p>
+<p>Their source code: <a
+href="https://github.com/Sporarum/slides-master-project">Sporarum/slides-master-project</a>
+on github.</p>
+<div class="fragment">
+<p><br> <br></p>
+<p>Implementation PRs: <a
+href="go.epfl.ch/QT-code">go.epfl.ch/QT-code</a></p>
 <aside class="notes">
 <p>Please, questions at the end</p>
 <p>except clarification questions</p>
 </aside>
+</div>
 </section>
 
 <section>
 <section id="introduction" class="title-slide slide level1">
 <h1>Introduction</h1>
-<!-- 
-## What are terms ?
+<div class="columns">
+<div class="column" style="width:10%;">
+<p>Our mascot:</p>
+<p><em>Le type qualifié</em>,</p>
+<p>The qualified guy</p>
+</div><div class="column" style="width:40%;">
+<p><img data-src="typeQualifie_noOutline.PNG" class="center"
+style="width:100.0%" /></p>
+</div><div class="column" style="width:10%;">
 
-These things:
-
-```scala {.numberLines}
-"Hello"
-
-1 + 1
-
-(x: Int) => -x
-
-{
-  def foo(x: Int) = -x
-  foo(42)
-}
-```
-
-## What are types ?
-
-These things:
-```scala {.numberLines}
-val exponent: Double = 2
-
-def exp(x: Double): Double = Math.pow(x, exponent)
-
-type Number = Int | Double
-
-type TypeConstructor[T] = List[T]
-```
-## Quiz
-
-Are the following terms or types ?
-
-``` {.numberLines}
-f
-g
-
-Letter
-Number
-```
-
-## Answers
-
-
-```scala {.numberLines}
-type f = Float
-val g = 'c'
-
-type Letter = Char
-val Number = 1000
-```
-
-What this teaches us:
-We can only know from context ! -->
-<!-- Add List[Pos] example -->
-<!-- So last week I wanted to be sure what it meant, so I went to google translate -->
+</div>
+</div>
 </section>
 <section id="what-are-qualified-types" class="slide level2">
 <h2>What are qualified types ?</h2>
@@ -162,49 +113,123 @@ class="math inline">\{x \in \mathbb{Z}\;|\;x &gt; 0\}</span></p>
     s.head.isUpper &amp;&amp;
     s.takeRight(6) == &quot;please&quot;
 &quot;Pass me the butter, please&quot;: PoliteString</code></pre>
+<p>:::</p>
 </div>
 </section>
 <section id="why-not-contracts" class="slide level2">
-<h2>Why not contracts</h2>
-</section>
-<section id="un-type-qualifié-cest-quoi" class="slide level2">
-<h2>Un type qualifié, c’est quoi ?</h2>
-<div class="columns">
-<div class="column" style="width:10%;">
+<h2>Why not contracts ?</h2>
+<pre class="scala"><code>def divideQualified(x: Int, y: Int with y != 0):
+  Int with _ * y == x
 
-</div><div class="column" style="width:40%;">
+</code></pre>
 <div class="fragment">
-<p><img data-src="typeQualifie.PNG" class="center"
-style="width:100.0%" /></p>
+<pre class="scala"><code>def divideContract(x: Int, y: Int): Int = {
+  require(y != 0)
+  ???
+}.ensuring(_ * y == x)</code></pre>
 </div>
-</div><div class="column" style="width:10%;">
+<div class="fragment">
+<p>Signature and code are mixed: <code>divideContract</code> cannot be
+abstract !</p>
+<aside class="notes">
+<p>Separation of signature and code</p>
+<p>Thus allows implementation to be abstract</p>
+</aside>
+</div>
+</section>
+<section id="re-use-predicates" class="slide level2">
+<h2>Re-use predicates</h2>
+<pre class="scala"><code>type NonZero = Int with y != 0
+def divideQualified(x: Int, y: NonZero):
+  Int with _ * y == x</code></pre>
+<div class="fragment">
+<pre class="scala"><code>def nonZero(y: Int) = y != 0
+def divideContract(x: Int, y: Int): Int = {
+  require(nonZero(y))
+  ???
+}.ensuring(_ * y == x)</code></pre>
+</div>
+<div class="fragment">
+<p>Still need to add a <code>require</code> and refer to
+<code>y</code></p>
+</div>
+</section>
+<section id="predicate-polymorphism" class="slide level2">
+<h2>Predicate polymorphism</h2>
+<pre class="scala"><code>def smallest[T](l: List[T]): T
 
+def smallestPos(l: List[Pos]) = smallest(l)</code></pre>
+<div class="fragment">
+<pre class="scala"><code>def smallestPosContract(l: List[Int]): Int = {
+  require(l.forall(_ &gt; 0))
+  ???
+}.ensuring(_ &gt; 0)</code></pre>
 </div>
+</section>
+<section id="in-brief" class="slide level2">
+<h2>In Brief</h2>
+<p>Looks like:</p>
+<pre class="scala"><code>type Pos = Int with _ &gt; 0</code></pre>
+<p>Behaves like contracts</p>
+<p>Powerful thanks to polymorphism</p>
+</section>
+<section id="the-compiler" class="slide level2">
+<h2>The compiler</h2>
+<p>Main phases:</p>
+<div>
+<ul>
+<li class="fragment">Parser</li>
+<li class="fragment">Typer</li>
+<li class="fragment">Pattern Matcher</li>
+<li class="fragment">Qualifier Checker</li>
+<li class="fragment">Erasure</li>
+<li class="fragment">Bytecode generator</li>
+</ul>
 </div>
 </section></section>
+<section id="our-work" class="title-slide slide level1">
+<h1>Our work</h1>
+<p>Trying to make qualified types approachable:</p>
+<ul>
+<li>Finding a friendly syntax</li>
+<li>Runtime checks &amp; Pattern matching</li>
+</ul>
+<div class="fragment">
+<p>Even without a solver, that’s already enough for some applications
+!</p>
+</div>
+</section>
+
 <section>
 <section id="syntax" class="title-slide slide level1">
 <h1>Syntax</h1>
+<pre class="scala"><code>type NonEmptyString = String with s =&gt; !s.isEmpty</code></pre>
 <p>Elements:</p>
+<div>
 <ul>
-<li>Base type (<code>String</code>)</li>
-<li>Identifier (<code>s</code>)</li>
-<li>Qualifier (<code>!s.isEmpty</code>)</li>
+<li class="fragment">Base type (<code>String</code>)</li>
+<li class="fragment">Identifier (<code>s</code>)</li>
+<li class="fragment">Qualifier (<code>!s.isEmpty</code>)</li>
 </ul>
+</div>
 <div class="fragment">
 <p>Internal representation:</p>
-<pre class="scala"><code>type Pos = Int @qualified[Int]((x: Int) =&gt; x &gt; 0)</code></pre>
+<pre class="scala"><code>String @qualified[String]((s: String) =&gt; !s.isEmpty)</code></pre>
+<aside class="notes">
+<p>TODO: Is it important to show the internal representation ?</p>
+</aside>
 </div>
 </section>
-<section id="unanimous" class="slide level2">
-<h2>Unanimous</h2>
+<section id="consensus" class="slide level2">
+<h2>Consensus</h2>
+<div class="fragment">
 <p>Boolean expressions:</p>
 <pre class="scala"><code>type Trivial = Int with true
 type Empty   = Int with false</code></pre>
+</div>
 <div class="fragment">
 <p>Available identifiers:</p>
 <pre class="scala"><code>def foo(x: Int with x &gt; 0, y: Int with y &gt; x): Int = y - x</code></pre>
-<!-- slide for this syntax -->
 <aside class="notes">
 <p>But this doesn’t work for the return type</p>
 </aside>
@@ -220,8 +245,25 @@ type Pos = Int with _ &gt; 0
 
 type Digit = Int with x =&gt; 0 &lt;= x &amp;&amp; x &lt; 10</code></pre>
 <div class="fragment">
-<p>But</p>
+<pre class="scala"><code>type IncreasingPair = (Int, Int) with _ &lt; _
+// desugared
+type IncreasingPair = (Int, Int) with (x, y) =&gt; x &lt; y
+// untupled to
+type IncreasingPair = (Int, Int) with p =&gt; p._1 &lt; p._2</code></pre>
+</div>
+</section>
+<section id="postfix-lambda-problems" class="slide level2">
+<h2>Postfix Lambda Problems</h2>
 <pre class="scala"><code>(Int with x =&gt; x &gt; 0) =&gt; (Int with y =&gt; y &lt; 0) =&gt; Int</code></pre>
+<div class="fragment">
+<pre class="scala"><code>val f = x =&gt; x &gt; 0
+
+type Valid = Int with x =&gt; x &gt; 0</code></pre>
+</div>
+<div class="fragment">
+<pre class="scala"><code>type Invalid = Int with f
+// desugars to
+type Invalid = Int with x =&gt; f</code></pre>
 <aside class="notes">
 <p>That’s the syntax we’ve been using so far</p>
 </aside>
@@ -229,34 +271,76 @@ type Digit = Int with x =&gt; 0 &lt;= x &amp;&amp; x &lt; 10</code></pre>
 </section>
 <section id="set-notation" class="slide level2">
 <h2>Set Notation</h2>
+<p>Inspired by math <span class="math inline">\{x \in \mathbb{Z}\;|\;x
+&gt; 0\}</span> <br> And other programming languages
+<code>{v:Int | v &gt; 0}</code></p>
 <pre class="scala"><code>import scala.language.experimental.setNotation
 
 type Pos = {x: Int with x &gt; 0}
 
 type Digit = {x: Int with 0 &lt;= x &amp;&amp; x &lt; 10}</code></pre>
+</section>
+<section id="set-notation-situations" class="slide level2">
+<h2>Set Notation Situations</h2>
+<pre class="scala"><code>(x: Int) =&gt; x.type</code></pre>
 <div class="fragment">
-<p>But</p>
-<pre class="scala"><code>(x: Int) =&gt; Int with x &gt; 0
-(x: Int with x &gt; 0) =&gt; Int with x &gt; 0
-{x: Int with x &gt; 0} =&gt; Int with x &gt; 0</code></pre>
-<!-- What if we just added an identifier which always refers to the base type -->
+<pre class="scala"><code>(x: Int with x &gt; 0) =&gt; x.type</code></pre>
 </div>
+<div class="fragment">
+<pre class="scala"><code>{x: Int with x &gt; 0} =&gt; x.type</code></pre>
+</div>
+</section></section>
+<section>
+<section id="syntax-proposal" class="title-slide slide level1">
+<h1>Syntax Proposal</h1>
+
 </section>
 <section id="it" class="slide level2">
 <h2><code>it</code></h2>
+<p>Simple idea: a more legible <code>_</code> that you can repeat</p>
+<div class="fragment">
 <pre class="scala"><code>type Pos = Int with it &gt; 0
 
 type Digit = Int with 0 &lt;= it &amp;&amp; it &lt; 10</code></pre>
-<div class="fragment">
-<p>(Optional) If nested qualifiers:</p>
-<!-- Add example where that is useful -->
-<pre class="scala"><code>it &lt; super.it + super.super.it</code></pre>
-<!-- What if we just allowed any type to have an identifier in front -->
 </div>
+<div class="fragment">
+<pre class="scala"><code>(Int with it &gt; 0) =&gt; (Int with it &lt; 0) =&gt; Int</code></pre>
+</div>
+<div class="fragment">
+<pre class="scala"><code>(x: Int with x &gt; 0) =&gt; Int with x &gt; 0
+    Int with it &gt; 0 =&gt; Int with x &gt; 0
+</code></pre>
+</div>
+</section>
+<section id="it-may-be-nested" class="slide level2">
+<h2><code>it</code> may be nested</h2>
+<pre class="scala"><code>type Outer = Int with
+  type Smaller = Int with it &lt; it?
+
+  ???</code></pre>
+</section>
+<section id="it-is-actually-fine" class="slide level2">
+<h2><code>it</code> is actually fine</h2>
+<pre class="scala"><code>type Outer = Int with
+  type Smaller = Int with it &lt; super.it
+
+  ???</code></pre>
+<aside class="notes">
+<p><code>Outer.it</code> would not work, as we could be in a type
+application:</p>
+<pre class="scala"><code>List[
+  Int with
+    type Half = Int with it == super.it / 2
+
+    ???
+]</code></pre>
+</aside>
 </section>
 <section id="id" class="slide level2">
 <h2><code>id</code></h2>
-<pre class="scala"><code>type Alias = (x: Int)</code></pre>
+<p>Different simple idea: identifiers for any type</p>
+<pre class="scala"><code>type Function = (x: Int) =&gt; x.type
+type Alias = (x: Int)</code></pre>
 <div class="fragment">
 <pre class="scala"><code>type Pos = (x: (y: Int) with y &gt; 0)</code></pre>
 </div>
@@ -268,24 +352,69 @@ type Digit = (x: Int with 0 &lt;= x &amp;&amp; x &lt; 10)</code></pre>
 </section>
 <section id="it-id" class="slide level2">
 <h2><code>it</code> &amp; <code>id</code></h2>
-<p>Nothing stops us from allowing both !</p>
+<p>They are compatible, and can even be translated one into the
+other:</p>
 <div class="fragment">
+<p><code>id</code> to <code>it</code>:</p>
 <pre class="scala"><code>type Pos = (x: Int with x &gt; 0)
-// as
+// transformed into
 type Pos = (x: (Int with it &gt; 0))</code></pre>
 </div>
 <div class="fragment">
+<p><code>it</code> to <code>id</code>:</p>
 <pre class="scala"><code>type Pos = Int with it &gt; 0
-// as
+// transformed into
 type Pos = (it$1: Int) with it$1 &gt; 0</code></pre>
-<aside class="notes">
-<p>Choosing which one is “true” depending on IR:</p>
-<ul>
-<li><code>it</code> if de Bruijn indices</li>
-<li><code>id</code> if identifiers</li>
-</ul>
-</aside>
 </div>
+</section></section>
+<section>
+<section id="runtime-checks" class="title-slide slide level1">
+<h1>Runtime Checks</h1>
+<div class="fragment">
+<p>Type test:</p>
+<pre class="scala"><code>x.isInstanceOf[T] // Boolean</code></pre>
+</div>
+<div class="fragment">
+<p><br> Cast:</p>
+<pre class="scala"><code>x.asInstanceOf[T] // T</code></pre>
+</div>
+</section>
+<section id="type-test-on-qualified-type" class="slide level2">
+<h2>Type test on qualified type</h2>
+<pre class="scala"><code>x.isInstanceOf[Int with _ &gt; 0]
+// after erasure
+x.isInstanceOf[Int] &amp;&amp; x &gt; 0</code></pre>
+<div class="fragment">
+<p>… won’t work:</p>
+<pre class="scala"><code>{println(&quot;❤️&quot;);}.isInstanceOf[Int with _ &gt; 0]
+// after erasure
+{println(&quot;❤️&quot;);}.isInstanceOf[Int] &amp;&amp; ({println(&quot;❤️&quot;);} &gt; 0)</code></pre>
+</div>
+</section>
+<section id="type-test-on-qualified-type-for-real" class="slide level2">
+<h2>Type test on qualified type for real</h2>
+<pre class="scala"><code>{println(&quot;❤️&quot;);}.isInstanceOf[Int with _ &gt; 0]
+// after erasure
+val fresh1 = {println(&quot;❤️&quot;);}</code></pre>
+<div class="fragment">
+<pre class="scala"><code>fresh1.isInstanceOf[Int] &amp;&amp; {
+  val fresh2 = fresh1.asInstanceOf[Int]
+  fresh2 &gt; 0
+}</code></pre>
+</div>
+</section>
+<section id="implementation" class="slide level2">
+<h2>Implementation</h2>
+<pre class="scala"><code>def transformTypeTest(expr: Tree, testType: Type, ...): Tree =
+  testType.dealiasKeepQualifyingAnnots match {
+    ...
+    case refine.EventuallyQualifiedType(baseType,
+                             closureDef(qualifier: DefDef)) =&gt;
+      evalOnce(expr) { e =&gt;
+        transformTypeTest(e, baseType, flagUnrelated).and(
+          BetaReduce(qualifier, List(List(e.asInstance(baseType)))))
+      }
+    ...</code></pre>
 </section></section>
 <section>
 <section id="pattern-matching" class="title-slide slide level1">
@@ -297,24 +426,17 @@ type Pos = (it$1: Int) with it$1 &gt; 0</code></pre>
 <div class="columns">
 <div class="column">
 <pre class="scala"><code>costlyCall() match
-  case i: Int =&gt;
-    i + 1
-
-  case s: String =&gt;
-    s.toUpperCase
-
-
-
-</code></pre>
+  case i: Int if i &gt; 0 =&gt;
+    i + 1</code></pre>
 </div><div class="column">
 <div class="fragment">
 <pre class="scala"><code>val x = costlyCall()
-if x.isInstanceOf[Int] then
+if x.isInstanceOf[Int] &amp;&amp; {
+  val i = x.asInstanceOf[Int]
+  i &gt; 0
+} then
   val i = x.asInstanceOf[Int]
   i + 1
-else if x.isInstanceOf[String] then
-  val s = x.asInstanceOf[String]
-  s.toUpperCase
 else
   throw new MatchError(x)</code></pre>
 </div>
@@ -324,21 +446,11 @@ else
 <p>Transformation done at pattern matching phase</p>
 </aside>
 </section>
-<section id="pattern-guards" class="slide level2">
-<h2>Pattern guards</h2>
-<div class="columns">
-<div class="column" style="width:50%;">
-<pre class="scala"><code>case y: Int if
-    0 &lt;= y &amp;&amp; y &lt; 10 =&gt;</code></pre>
+<section id="implementation-1" class="slide level2">
+<h2>Implementation</h2>
 <div class="fragment">
-<pre class="scala"><code>x.isInstanceOf[Int] &amp;&amp; {
-  val y = x.asInstanceOf[Int]
-  0 &lt;= y &amp;&amp; y &lt; 10
-}</code></pre>
-</div>
-</div><div class="column" style="width:50%;">
-<p><span style="color: white;"> Test </span></p>
-</div>
+<p><br> <br> <br> <br></p>
+<p><em>This slide intentionally left blank</em></p>
 </div>
 </section>
 <section id="pattern-guards-qualified-types" class="slide level2">
@@ -347,39 +459,33 @@ else
 <div class="column" style="width:50%;">
 <pre class="scala"><code>case y: Int if
     0 &lt;= y &amp;&amp; y &lt; 10 =&gt;</code></pre>
-<pre class="scala"><code>x.isInstanceOf[Int] &amp;&amp; {
+<div class="fragment">
+<pre class="scala"><code>if x.isInstanceOf[Int] &amp;&amp; {
   val y = x.asInstanceOf[Int]
   0 &lt;= y &amp;&amp; y &lt; 10
-}</code></pre>
+} then ...</code></pre>
+</div>
 </div><div class="column" style="width:50%;">
+<div class="fragment">
 <pre class="scala"><code>case y: Int with
     0 &lt;= y &amp;&amp; y &lt; 10 =&gt;</code></pre>
-<div class="fragment">
-<pre class="scala"><code>x.isInstanceOf[Int with y =&gt; 
-    0 &lt;= y &amp;&amp; y &lt; 10]</code></pre>
 </div>
 <div class="fragment">
-<pre class="scala"><code>x.isInstanceOf[Int] &amp;&amp; {
+<pre class="scala"><code>if x.isInstanceOf[Int with y =&gt; 
+    0 &lt;= y &amp;&amp; y &lt; 10]
+then ...</code></pre>
+</div>
+<div class="fragment">
+<pre class="scala"><code>if x.isInstanceOf[Int] &amp;&amp; {
   val y = x.asInstanceOf[Int]
   0 &lt;= y &amp;&amp; y &lt; 10
-}</code></pre>
+} then ...</code></pre>
 </div>
 </div>
 </div>
-<!-- Either exaplain why this similarity is not exact, or not mention it -->
 <aside class="notes">
 <p>Transformation done at erasure phase</p>
 </aside>
-<!-- Needs more transition until this -->
-</section>
-<section id="ducks" class="slide level2">
-<h2>Ducks</h2>
-<p>If it quacks like a pattern guard, why not make it look like one:</p>
-<pre class="scala"><code>type Pos = Int if it &gt; 0
-
-x match
-  case (x: Int) if x &gt; 0 =&gt;
-  case x: (Int if x &gt; 0) =&gt;</code></pre>
 </section>
 <section id="before" class="slide level2">
 <h2>Before</h2>
@@ -420,33 +526,156 @@ type PoliteString = NonEmptyString with s =&gt; s.head.isUpper &amp;&amp;
 <p>This is simplified from the actual output</p>
 </aside>
 </section>
-<section id="implementation" class="slide level2">
-<h2>Implementation</h2>
-<pre class="scala"><code>def transformTypeTest(expr: Tree, testType: Type, ...): Tree =
-  testType.dealiasKeepQualifyingAnnots match {
-    ...
-    case refine.EventuallyQualifiedType(baseType,
-                             closureDef(qualifier: DefDef)) =&gt;
-      evalOnce(expr) { e =&gt;
-        transformTypeTest(e, baseType, flagUnrelated).and(
-          BetaReduce(qualifier, List(List(e.asInstance(baseType)))))
-      }
-    ...</code></pre>
+<section id="ducks" class="slide level2">
+<h2>Ducks</h2>
+<p>If it quacks like a pattern guard, why not make it look like one:</p>
+<div class="fragment">
+<pre class="scala"><code>type Pos = Int if it &gt; 0</code></pre>
+</div>
+<div class="fragment">
+<pre class="scala"><code>x match
+  case (x: Int) if x &gt; 0 =&gt;
+  case x: (Int if x &gt; 0) =&gt;</code></pre>
+</div>
+<div class="fragment">
+<p>Flow typing for free !</p>
+</div>
 </section></section>
+<section id="syntax-checks" class="title-slide slide level1">
+<h1>Syntax + Checks =</h1>
+<div class="fragment">
+<pre class="scala"><code>type Nat = Int with _ &gt;= 0
+
+def log(x: Nat): Int = ???</code></pre>
+</div>
+<div class="fragment">
+<pre class="scala"><code>def logUnsafe(x: Int) =
+  log(x) // error</code></pre>
+</div>
+<div class="fragment">
+<pre class="scala"><code>def logSafe(x: Int) = x match
+  case x: Nat =&gt; Some(log(x))
+  case _      =&gt; None</code></pre>
+</div>
+</section>
+
 <section id="conclusion" class="title-slide slide level1">
 <h1>Conclusion</h1>
+<div class="columns">
+<div class="column">
+<div>
 <ul>
-<li>2 Implemented syntaxes: postfix lambda and set notation</li>
-<li>1 proposed syntax: <code>it</code> &amp; <code>id</code></li>
-<li>Pattern matching: frames qualified types are as a compiletime
-generalization of pattern guards</li>
+<li class="fragment">Implemented syntaxes</li>
+<li class="fragment"><ul>
+<li class="fragment">postfix lambda: <code>Int with _ &gt; 0</code></li>
+</ul></li>
+<li class="fragment"><ul>
+<li class="fragment">set notation:
+<code>{x: Int with x &gt; 0}</code></li>
+</ul></li>
+<li class="fragment">Proposed syntax</li>
+<li class="fragment"><ul>
+<li class="fragment"><code>it</code>:
+<code>Int with it &gt; 0</code></li>
+</ul></li>
+<li class="fragment"><ul>
+<li class="fragment"><code>id</code>:
+<code>(x: Int) with x &gt; 0</code></li>
+</ul></li>
+<li class="fragment"><ul>
+<li class="fragment">And potentially <code>if</code> as keyword</li>
+</ul></li>
+<li class="fragment">Pattern matching:</li>
+<li class="fragment"><ul>
+<li class="fragment">qualified types as “compiletime pattern
+guards”</li>
+</ul></li>
 </ul>
+</div>
+<div class="fragment">
+<p>Future work: Solver</p>
+</div>
+</div><div class="column" style="width:30%;">
+<p><img data-src="typeQualifie_noOutline.PNG" class="center"
+style="width:100.0%" /></p>
+</div>
+</div>
 </section>
 
 <section>
 <section id="extra-slides" class="title-slide slide level1">
 <h1>Extra Slides</h1>
 
+</section>
+<section id="json-schema" class="slide level2">
+<h2>JSON schema</h2>
+<p>Works for both syntaxes:</p>
+<pre class="scala"><code>case class LongitudeAndLatitudeValues(
+  latitude: Double with -90 &lt;= latitude &amp;&amp; latitude &lt;= 90,
+  longitude: Double with -180 &lt;= longitude &amp;&amp; longitude &lt;= 180,
+  city: String with raw&quot;^[A-Za-z . ,&#39;-]+$$&quot;.r.matches(city)
+) extends Obj</code></pre>
+</section>
+<section id="shape-postfix-lambda" class="slide level2">
+<h2>Shape: Postfix Lambda</h2>
+<pre class="scala"><code>type Shape = List[Int with _ &gt; 0]
+
+extension (s: Shape)
+  def nbrElems = s.fold(1)(_ * _)
+  def reduce(axes: List[Int with x =&gt; s.indices.contains(x)]) = s.zipWithIndex.filter((_, i) =&gt; axes.contains(i)).map(_._1)</code></pre>
+</section>
+<section id="tensor-postfix-lambda" class="slide level2">
+<h2>Tensor: Postfix Lambda</h2>
+<pre class="scala"><code>trait Tensor[T]:
+  val shape: Shape
+  def sameShape(t: Tensor[T]): Boolean = ???
+  def add(t: Tensor[T] with t.sameShape(this)):
+    Tensor[T] with _.sameShape(this)
+
+  def mean(axes: List[Int with x =&gt; shape.indices.contains(x)]):
+    Tensor[T] with _.shape == shape.reduce(axes)
+
+  def reshape(newShape: Shape with newShape.nbrElems == shape.nbrElems):
+    Tensor[T] with _.shape == newShape</code></pre>
+</section>
+<section id="shape-set-notation" class="slide level2">
+<h2>Shape: Set Notation</h2>
+<pre class="scala"><code>type Shape = List[{x: Int with x &gt; 0}]
+
+extension (s: Shape)
+  def nbrElems = s.fold(1)(_ * _)
+  def reduce(axes: List[{x: Int with s.indices.contains(x)}]) = s.zipWithIndex.filter((_, i) =&gt; axes.contains(i)).map(_._1)</code></pre>
+</section>
+<section id="tensor-set-notation" class="slide level2">
+<h2>Tensor: Set Notation</h2>
+<pre class="scala"><code>trait Tensor[T]:
+  val shape: Shape
+  def sameShape(t: Tensor[T]): Boolean = ???
+  def add(t: Tensor[T] with t.sameShape(this)):
+    {res: Tensor[T] with res.sameShape(this)}
+
+  def mean(axes: List[{x: Int with shape.indices.contains(x)}]):
+    {res: Tensor[T] with res.shape == shape.reduce(axes)}
+
+  def reshape(newShape: Shape with newShape.nbrElems == shape.nbrElems):
+    {res: Tensor[T] with res.shape == newShape}</code></pre>
+</section>
+<section id="overloading-resolution" class="slide level2">
+<h2>Overloading Resolution</h2>
+<pre class="scala"><code>def f(x: Any) = &quot;f1&quot;
+def f(x: Pos) = &quot;f2&quot;
+
+f(-1)</code></pre>
+<div class="fragment">
+<p>During typing: <code>Pos =:= Int</code>, <code>f1</code> gets
+chosen</p>
+</div>
+<div class="fragment">
+<p>During QualChecking: <code>Pos &lt; Int</code>, and type mismatch</p>
+</div>
+<div class="fragment">
+<p>But <code>f2</code> would have been fine !</p>
+</div>
 </section>
 <section id="irrefutability" class="slide level2">
 <h2>Irrefutability</h2>
@@ -459,44 +688,19 @@ object Extractor:
   case Extractor(x) =&gt; x
   case _ =&gt; None // warning: unreachable case</code></pre>
 </section>
-<section id="json-schema" class="slide level2">
-<h2>JSON schema</h2>
-<p>Works for both syntaxes:</p>
-<pre class="scala"><code>case class LongitudeAndLatitudeValues(
-  latitude: Double with -90 &lt;= latitude &amp;&amp; latitude &lt;= 90,
-  longitude: Double with -180 &lt;= longitude &amp;&amp; longitude &lt;= 180,
-  city: String with raw&quot;^[A-Za-z . ,&#39;-]+$$&quot;.r.matches(city)
-) extends Obj</code></pre>
-</section>
-<section id="tensor-postfix-lambda" class="slide level2">
-<h2>Tensor: Postfix Lambda</h2>
-<pre class="scala"><code>type Shape = List[Int with _ &gt; 0]
-
-extension (s: Shape)
-  def nbrElems = s.fold(1)(_ * _)
-  def reduce(axes: List[Int with x =&gt; s.indices.contains(x)]) = s.zipWithIndex.filter((_, i) =&gt; axes.contains(i)).map(_._1)
-
-trait Tensor[T]:
-  val shape: Shape
-  def sameShape(t: Tensor[T]): Boolean = shape.corresponds(t.shape)(_ == _)
-  def add(t: Tensor[T] with t.sameShape(this)): Tensor[T] with _.sameShape(this)
-  def mean(axes: List[Int with x =&gt; shape.indices.contains(x)]): Tensor[T] with _.shape == shape.reduce(axes)
-  def reshape(newShape: Shape with newShape.nbrElems == shape.nbrElems): Tensor[T] with _.shape == newShape</code></pre>
-</section>
-<section id="tensor-set-notation" class="slide level2">
-<h2>Tensor: Set Notation</h2>
-<pre class="scala"><code>type Shape = List[{x: Int with x &gt; 0}]
-
-extension (s: Shape)
-  def nbrElems = s.fold(1)(_ * _)
-  def reduce(axes: List[{x: Int with s.indices.contains(x)}]) = s.zipWithIndex.filter((_, i) =&gt; axes.contains(i)).map(_._1)
-
-trait Tensor[T]:
-  val shape: Shape
-  def sameShape(t: Tensor[T]): Boolean = shape.corresponds(t.shape)(_ == _)
-  def add(t: Tensor[T] with t.sameShape(this)): {res: Tensor[T] with res.sameShape(this)}
-  def mean(axes: List[{x: Int with shape.indices.contains(x)}]): {res: Tensor[T] with res.shape == shape.reduce(axes)}
-  def reshape(newShape: Shape with newShape.nbrElems == shape.nbrElems): {res: Tensor[T] with res.shape == newShape}</code></pre>
+<section id="it-and-de-bruijn-indices" class="slide level2">
+<h2><code>it</code> and de Bruijn indices</h2>
+<p><span class="math inline">\lambda f.\:\lambda g.\:\lambda x.\:f (g
+x)</span></p>
+<p><span
+class="math inline">\lambda\:\lambda\:\lambda\:3\:(2\:1)</span></p>
+<pre class="scala"><code>... with ...
+  ... with ...
+    ... with ...
+      super.super.it( super.it( it ) )</code></pre>
+<div class="fragment">
+<p>But please don’t do that</p>
+</div>
 </section></section>
     </div>
   </div>

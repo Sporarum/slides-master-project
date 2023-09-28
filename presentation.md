@@ -5,20 +5,16 @@ author: "[Quentin Bernet](mailto:quentin.bernet@epfl.ch) @[LARA](https://lara.ep
 
 # Slides
 
-<!-- 
-Max ~25 slides
-1 min by slide
-Slides to the point
-commit html
-can make github page
-
-Add _ example outside of Qual types
-Maybe "table of content" slide
--->
-
 These slides can be found at [go.epfl.ch/QT-slides](https://go.epfl.ch/QT-slides).
 
-The source code: [https://github.com/Sporarum/slides-master-project](https://github.com/Sporarum/slides-master-project).
+Their source code: [Sporarum/slides-master-project](https://github.com/Sporarum/slides-master-project) on github.
+
+. . .
+
+<br>
+<br>
+
+Implementation PRs: [go.epfl.ch/QT-code](go.epfl.ch/QT-code)
 
 ::: notes
 
@@ -30,83 +26,54 @@ except clarification questions
 
 # Introduction
 
-<!-- 
-## What are terms ?
+::::: columns
 
-These things:
+:::: {.column width="10%"}
 
-```scala {.numberLines}
-"Hello"
+Our mascot:
 
-1 + 1
+_Le type qualifié_,
 
-(x: Int) => -x
+The qualified guy
 
-{
-  def foo(x: Int) = -x
-  foo(42)
-}
-```
-
-## What are types ?
-
-These things:
-```scala {.numberLines}
-val exponent: Double = 2
-
-def exp(x: Double): Double = Math.pow(x, exponent)
-
-type Number = Int | Double
-
-type TypeConstructor[T] = List[T]
-```
-## Quiz
-
-Are the following terms or types ?
-
-``` {.numberLines}
-f
-g
-
-Letter
-Number
-```
-
-## Answers
+::::
 
 
-```scala {.numberLines}
-type f = Float
-val g = 'c'
+:::: {.column width="40%"}
 
-type Letter = Char
-val Number = 1000
-```
 
-What this teaches us:
-We can only know from context ! -->
 
-<!-- Add List[Pos] example -->
+![](typeQualifie_noOutline.PNG){ width=100% .center }
 
-<!-- So last week I wanted to be sure what it meant, so I went to google translate -->
+
+::::
+
+:::: {.column width="10%"}
+
+::::
+
+:::::
 
 ## What are qualified types ?
 
 More precise types, inspired by sets builders: $\{x \in \mathbb{Z}\;|\;x > 0\}$
 
-::: fragment
+. . .
+
 ```scala {.numberLines}
 type Pos = Int with _ > 0
 4: Pos
 ```
-:::
-::: fragment
+
+. . .
+
 ```scala
 type NonEmptyString = String with s => !s.isEmpty
 "Nilla Wafer Top Hat Time": NonEmptyString
 ```
-:::
-::: fragment
+
+. . .
+
 ```scala
 type PoliteString = NonEmptyString with s =>
     s.head.isUpper &&
@@ -115,54 +82,147 @@ type PoliteString = NonEmptyString with s =>
 ```
 :::
 
-## Why not contracts
+## Why not contracts ?
+
+```scala
+def divideQualified(x: Int, y: Int with y != 0):
+  Int with _ * y == x
 
 
+```
 
-## Un type qualifié, c'est quoi ?
+. . .
 
-::::: columns
+```scala
+def divideContract(x: Int, y: Int): Int = {
+  require(y != 0)
+  ???
+}.ensuring(_ * y == x)
+```
 
-:::: {.column width="10%"}
+. . .
 
-::::
+Signature and code are mixed: `divideContract` cannot be abstract !
 
+::: notes
 
-:::: {.column width="40%"}
+Separation of signature and code
 
-
-::: fragment
-
-![](typeQualifie.PNG){ width=100% .center }
+Thus allows implementation to be abstract
 
 :::
 
-::::
+## Re-use predicates
 
-:::: {.column width="10%"}
+```scala
+type NonZero = Int with y != 0
+def divideQualified(x: Int, y: NonZero):
+  Int with _ * y == x
+```
+
+. . .
+
+```scala
+def nonZero(y: Int) = y != 0
+def divideContract(x: Int, y: Int): Int = {
+  require(nonZero(y))
+  ???
+}.ensuring(_ * y == x)
+```
+
+. . .
+
+Still need to add a `require` and refer to `y`
 
 
-::::
+## Predicate polymorphism
 
-:::::
+```scala
+def smallest[T](l: List[T]): T
+
+def smallestPos(l: List[Pos]) = smallest(l)
+```
+
+. . .
+
+```scala
+def smallestPosContract(l: List[Int]): Int = {
+  require(l.forall(_ > 0))
+  ???
+}.ensuring(_ > 0)
+```
+
+## In Brief
+
+Looks like:
+
+```scala
+type Pos = Int with _ > 0
+```
+
+Behaves like contracts
+
+Powerful thanks to polymorphism
+
+## The compiler
+
+Main phases:
+
+::: incremental
+
+* Parser
+* Typer
+* Pattern Matcher
+* Qualifier Checker
+* Erasure
+* Bytecode generator
+
+:::
+
+# Our work
+
+Trying to make qualified types approachable:
+
+* Finding a friendly syntax
+* Runtime checks & Pattern matching
+
+. . .
+
+Even without a solver, that's already enough for some applications !
 
 # Syntax
 
+```scala
+type NonEmptyString = String with s => !s.isEmpty
+```
+
 Elements:
+
+::: incremental
 
 * Base type (`String`)
 * Identifier (`s`)
 * Qualifier (`!s.isEmpty`)
+
+:::
 
 . . .
 
 Internal representation:
 
 ```scala
-type Pos = Int @qualified[Int]((x: Int) => x > 0)
+String @qualified[String]((s: String) => !s.isEmpty)
 ```
 
-## Unanimous
+::: notes
+
+TODO: Is it important to show the internal representation ?
+
+:::
+
+## Consensus
+
+::: fragment
 
 Boolean expressions:
 ```scala
@@ -170,15 +230,14 @@ type Trivial = Int with true
 type Empty   = Int with false
 ```
 
+:::
+
 . . .
 
 Available identifiers:
 ```scala
 def foo(x: Int with x > 0, y: Int with y > x): Int = y - x
 ```
-
-
-<!-- slide for this syntax -->
 
 ::: notes
 
@@ -199,10 +258,32 @@ type Digit = Int with x => 0 <= x && x < 10
 
 . . .
 
-But
+```scala
+type IncreasingPair = (Int, Int) with _ < _
+// desugared
+type IncreasingPair = (Int, Int) with (x, y) => x < y
+// untupled to
+type IncreasingPair = (Int, Int) with p => p._1 < p._2
+```
+
+## Postfix Lambda Problems
 
 ```scala
 (Int with x => x > 0) => (Int with y => y < 0) => Int
+```
+
+. . .
+
+```scala
+val f = x => x > 0
+
+type Valid = Int with x => x > 0
+```
+. . .
+```scala
+type Invalid = Int with f
+// desugars to
+type Invalid = Int with x => f
 ```
 
 ::: notes
@@ -213,6 +294,9 @@ That's the syntax we've been using so far
 
 ## Set Notation
 
+Inspired by math $\{x \in \mathbb{Z}\;|\;x > 0\}$ <br>
+And other programming languages `{v:Int | v > 0}`
+
 ```scala
 import scala.language.experimental.setNotation
 
@@ -221,19 +305,27 @@ type Pos = {x: Int with x > 0}
 type Digit = {x: Int with 0 <= x && x < 10}
 ```
 
-. . .
-
-But
+## Set Notation Situations
 
 ```scala
-(x: Int) => Int with x > 0
-(x: Int with x > 0) => Int with x > 0
-{x: Int with x > 0} => Int with x > 0
+(x: Int) => x.type
+```
+. . .
+```scala
+(x: Int with x > 0) => x.type
+```
+. . .
+```scala
+{x: Int with x > 0} => x.type
 ```
 
-<!-- What if we just added an identifier which always refers to the base type -->
+# Syntax Proposal
 
 ## `it`
+
+Simple idea: a more legible `_` that you can repeat
+
+. . .
 
 ```scala
 type Pos = Int with it > 0
@@ -243,18 +335,58 @@ type Digit = Int with 0 <= it && it < 10
 
 . . .
 
-(Optional) If nested qualifiers:
-
-<!-- Add example where that is useful -->
 ```scala
-it < super.it + super.super.it
+(Int with it > 0) => (Int with it < 0) => Int
 ```
 
-<!-- What if we just allowed any type to have an identifier in front -->
+. . .
+
+```scala
+(x: Int with x > 0) => Int with x > 0
+    Int with it > 0 => Int with x > 0
+
+```
+
+
+## `it` may be nested
+
+```scala
+type Outer = Int with
+  type Smaller = Int with it < it?
+
+  ???
+```
+
+## `it` is actually fine
+
+```scala
+type Outer = Int with
+  type Smaller = Int with it < super.it
+
+  ???
+```
+
+::: notes
+
+`Outer.it` would not work, as we could be in a type application:
+
+```scala
+List[
+  Int with
+    type Half = Int with it == super.it / 2
+
+    ???
+]
+```
+
+:::
 
 ## `id`
 
+Different simple idea: identifiers for any type
+
 ```scala
+type Function = (x: Int) => x.type
 type Alias = (x: Int)
 ```
 
@@ -274,32 +406,94 @@ type Digit = (x: Int with 0 <= x && x < 10)
 
 ## `it` & `id`
 
-Nothing stops us from allowing both !
+They are compatible, and can even be translated one into the other:
 
 . . .
 
+`id` to `it`:
+
 ```scala
 type Pos = (x: Int with x > 0)
-// as
+// transformed into
 type Pos = (x: (Int with it > 0))
 ```
 
 . . .
 
+`it` to `id`:
+
 ```scala
 type Pos = Int with it > 0
-// as
+// transformed into
 type Pos = (it$1: Int) with it$1 > 0
 ```
 
-::: notes
+# Runtime Checks
 
-Choosing which one is "true" depending on IR:
+::: fragment
+Type test:
 
-* `it` if de Bruijn indices
-* `id` if identifiers
-
+```scala
+x.isInstanceOf[T] // Boolean
+```
 :::
+
+. . .
+
+<br>
+Cast:
+
+```scala
+x.asInstanceOf[T] // T
+```
+
+## Type test on qualified type
+
+```scala
+x.isInstanceOf[Int with _ > 0]
+// after erasure
+x.isInstanceOf[Int] && x > 0
+```
+. . .
+
+... won't work:
+
+```scala
+{println("❤️");}.isInstanceOf[Int with _ > 0]
+// after erasure
+{println("❤️");}.isInstanceOf[Int] && ({println("❤️");} > 0)
+```
+
+## Type test on qualified type for real
+
+```scala
+{println("❤️");}.isInstanceOf[Int with _ > 0]
+// after erasure
+val fresh1 = {println("❤️");}
+```
+. . .
+```scala
+fresh1.isInstanceOf[Int] && {
+  val fresh2 = fresh1.asInstanceOf[Int]
+  fresh2 > 0
+}
+```
+
+## Implementation
+
+```scala
+def transformTypeTest(expr: Tree, testType: Type, ...): Tree =
+  testType.dealiasKeepQualifyingAnnots match {
+    ...
+    case refine.EventuallyQualifiedType(baseType,
+                             closureDef(qualifier: DefDef)) =>
+      evalOnce(expr) { e =>
+        transformTypeTest(e, baseType, flagUnrelated).and(
+          BetaReduce(qualifier, List(List(e.asInstance(baseType)))))
+      }
+    ...
+```
+
 # Pattern Matching
 
 ## Is just syntactic sugar
@@ -309,15 +503,8 @@ Choosing which one is "true" depending on IR:
 :::: column
 ```scala
 costlyCall() match
-  case i: Int =>
+  case i: Int if i > 0 =>
     i + 1
-
-  case s: String =>
-    s.toUpperCase
-
-
-
-
 ```
 ::::
 
@@ -327,12 +514,12 @@ costlyCall() match
 
 ```scala
 val x = costlyCall()
-if x.isInstanceOf[Int] then
+if x.isInstanceOf[Int] && {
+  val i = x.asInstanceOf[Int]
+  i > 0
+} then
   val i = x.asInstanceOf[Int]
   i + 1
-else if x.isInstanceOf[String] then
-  val s = x.asInstanceOf[String]
-  s.toUpperCase
 else
   throw new MatchError(x)
 ```
@@ -349,36 +536,17 @@ Transformation done at pattern matching phase
 
 :::
 
-## Pattern guards
+## Implementation
 
-::::: columns
-
-:::: {.column width="50%"}
-
-```scala
-case y: Int if
-    0 <= y && y < 10 =>
-```
 ::: fragment
-```scala
-x.isInstanceOf[Int] && {
-  val y = x.asInstanceOf[Int]
-  0 <= y && y < 10
-}
-```
+<br>
+<br>
+<br>
+<br>
+
+_This slide intentionally left blank_
+
 :::
-
-::::
-
-
-:::: {.column width="50%"}
-<span style="color: white;">
-Test
-</span>
-
-::::
-
-:::::
 
 ## Pattern guards & qualified types
 
@@ -390,35 +558,39 @@ Test
 case y: Int if
     0 <= y && y < 10 =>
 ```
-
+::: fragment
 ```scala
-x.isInstanceOf[Int] && {
+if x.isInstanceOf[Int] && {
   val y = x.asInstanceOf[Int]
   0 <= y && y < 10
-}
+} then ...
 ```
+:::
 
 ::::
 
 :::: {.column width="50%"}
 
+::: fragment
 ```scala
 case y: Int with
     0 <= y && y < 10 =>
 ```
+:::
 
 ::: fragment
 ```scala
-x.isInstanceOf[Int with y => 
+if x.isInstanceOf[Int with y => 
     0 <= y && y < 10]
+then ...
 ```
 :::
 ::: fragment
 ```scala
-x.isInstanceOf[Int] && {
+if x.isInstanceOf[Int] && {
   val y = x.asInstanceOf[Int]
   0 <= y && y < 10
-}
+} then ...
 ```
 :::
 
@@ -426,26 +598,11 @@ x.isInstanceOf[Int] && {
 
 :::::
 
-<!-- Either exaplain why this similarity is not exact, or not mention it -->
-
 ::: notes
 
 Transformation done at erasure phase
 
 :::
-
-<!-- Needs more transition until this -->
-## Ducks
-
-If it quacks like a pattern guard, why not make it look like one:
-
-```scala
-type Pos = Int if it > 0
-
-x match
-  case (x: Int) if x > 0 =>
-  case x: (Int if x > 0) =>
-```
 
 ## Before
 
@@ -498,31 +655,171 @@ This is simplified from the actual output
 
 :::
 
-## Implementation
+## Ducks
+
+If it quacks like a pattern guard, why not make it look like one:
+
+. . .
 
 ```scala
-def transformTypeTest(expr: Tree, testType: Type, ...): Tree =
-  testType.dealiasKeepQualifyingAnnots match {
-    ...
-    case refine.EventuallyQualifiedType(baseType,
-                             closureDef(qualifier: DefDef)) =>
-      evalOnce(expr) { e =>
-        transformTypeTest(e, baseType, flagUnrelated).and(
-          BetaReduce(qualifier, List(List(e.asInstance(baseType)))))
-      }
-    ...
+type Pos = Int if it > 0
+```
+. . .
+```scala
+x match
+  case (x: Int) if x > 0 =>
+  case x: (Int if x > 0) =>
+```
+. . .
+
+Flow typing for free !
+
+
+# Syntax + Checks =
+
+::: fragment
+```scala
+type Nat = Int with _ >= 0
+
+def log(x: Nat): Int = ???
+```
+:::
+
+. . .
+```scala
+def logUnsafe(x: Int) =
+  log(x) // error
+```
+. . .
+```scala
+def logSafe(x: Int) = x match
+  case x: Nat => Some(log(x))
+  case _      => None
 ```
 
 # Conclusion
 
-* 2 Implemented syntaxes:
-  postfix lambda and set notation
-* 1 proposed syntax:
-  `it` & `id`
+::::: columns
+
+:::: column
+
+::: incremental
+
+* Implemented syntaxes
+* * postfix lambda: `Int with _ > 0`
+* * set notation: `{x: Int with x > 0}`
+* Proposed syntax
+* * `it`: `Int with it > 0`
+* * `id`: `(x: Int) with x > 0`
+* * And potentially `if` as keyword
 * Pattern matching:
-  frames qualified types are as a compiletime generalization of pattern guards
+* * qualified types as "compiletime pattern guards"
+
+:::
+
+::: fragment
+Future work: Solver
+:::
+
+::::
+
+
+:::: {.column width="30%"}
+
+![](typeQualifie_noOutline.PNG){ width=100% .center }
+
+::::
+
+:::::
 
 # Extra Slides
+
+## JSON schema
+
+Works for both syntaxes:
+
+```scala
+case class LongitudeAndLatitudeValues(
+  latitude: Double with -90 <= latitude && latitude <= 90,
+  longitude: Double with -180 <= longitude && longitude <= 180,
+  city: String with raw"^[A-Za-z . ,'-]+$$".r.matches(city)
+) extends Obj
+```
+
+## Shape: Postfix Lambda
+
+```scala
+type Shape = List[Int with _ > 0]
+
+extension (s: Shape)
+  def nbrElems = s.fold(1)(_ * _)
+  def reduce(axes: List[Int with x => s.indices.contains(x)]) = s.zipWithIndex.filter((_, i) => axes.contains(i)).map(_._1)
+```
+
+## Tensor: Postfix Lambda
+
+```scala
+trait Tensor[T]:
+  val shape: Shape
+  def sameShape(t: Tensor[T]): Boolean = ???
+  def add(t: Tensor[T] with t.sameShape(this)):
+    Tensor[T] with _.sameShape(this)
+
+  def mean(axes: List[Int with x => shape.indices.contains(x)]):
+    Tensor[T] with _.shape == shape.reduce(axes)
+
+  def reshape(newShape: Shape with newShape.nbrElems == shape.nbrElems):
+    Tensor[T] with _.shape == newShape
+```
+
+## Shape: Set Notation
+
+```scala
+type Shape = List[{x: Int with x > 0}]
+
+extension (s: Shape)
+  def nbrElems = s.fold(1)(_ * _)
+  def reduce(axes: List[{x: Int with s.indices.contains(x)}]) = s.zipWithIndex.filter((_, i) => axes.contains(i)).map(_._1)
+```
+
+## Tensor: Set Notation
+
+```scala
+trait Tensor[T]:
+  val shape: Shape
+  def sameShape(t: Tensor[T]): Boolean = ???
+  def add(t: Tensor[T] with t.sameShape(this)):
+    {res: Tensor[T] with res.sameShape(this)}
+
+  def mean(axes: List[{x: Int with shape.indices.contains(x)}]):
+    {res: Tensor[T] with res.shape == shape.reduce(axes)}
+
+  def reshape(newShape: Shape with newShape.nbrElems == shape.nbrElems):
+    {res: Tensor[T] with res.shape == newShape}
+```
+
+
+## Overloading Resolution
+
+```scala
+def f(x: Any) = "f1"
+def f(x: Pos) = "f2"
+
+f(-1)
+```
+
+. . .
+
+During typing: `Pos =:= Int`, `f1` gets chosen
+
+. . .
+
+During QualChecking: `Pos < Int`, and type mismatch
+
+. . .
+
+But `f2` would have been fine !
+
 
 ## Irrefutability
 
@@ -537,48 +834,19 @@ object Extractor:
   case _ => None // warning: unreachable case
 ```
 
-## JSON schema
+## `it` and de Bruijn indices
 
-Works for both syntaxes:
+$\lambda f.\:\lambda g.\:\lambda x.\:f (g x)$
 
-```scala
-case class LongitudeAndLatitudeValues(
-  latitude: Double with -90 <= latitude && latitude <= 90,
-  longitude: Double with -180 <= longitude && longitude <= 180,
-  city: String with raw"^[A-Za-z . ,'-]+$$".r.matches(city)
-) extends Obj
-```
-
-## Tensor: Postfix Lambda
+$\lambda\:\lambda\:\lambda\:3\:(2\:1)$
 
 ```scala
-type Shape = List[Int with _ > 0]
-
-extension (s: Shape)
-  def nbrElems = s.fold(1)(_ * _)
-  def reduce(axes: List[Int with x => s.indices.contains(x)]) = s.zipWithIndex.filter((_, i) => axes.contains(i)).map(_._1)
-
-trait Tensor[T]:
-  val shape: Shape
-  def sameShape(t: Tensor[T]): Boolean = shape.corresponds(t.shape)(_ == _)
-  def add(t: Tensor[T] with t.sameShape(this)): Tensor[T] with _.sameShape(this)
-  def mean(axes: List[Int with x => shape.indices.contains(x)]): Tensor[T] with _.shape == shape.reduce(axes)
-  def reshape(newShape: Shape with newShape.nbrElems == shape.nbrElems): Tensor[T] with _.shape == newShape
+... with ...
+  ... with ...
+    ... with ...
+      super.super.it( super.it( it ) )
 ```
 
-## Tensor: Set Notation
+. . .
 
-```scala
-type Shape = List[{x: Int with x > 0}]
-
-extension (s: Shape)
-  def nbrElems = s.fold(1)(_ * _)
-  def reduce(axes: List[{x: Int with s.indices.contains(x)}]) = s.zipWithIndex.filter((_, i) => axes.contains(i)).map(_._1)
-
-trait Tensor[T]:
-  val shape: Shape
-  def sameShape(t: Tensor[T]): Boolean = shape.corresponds(t.shape)(_ == _)
-  def add(t: Tensor[T] with t.sameShape(this)): {res: Tensor[T] with res.sameShape(this)}
-  def mean(axes: List[{x: Int with shape.indices.contains(x)}]): {res: Tensor[T] with res.shape == shape.reduce(axes)}
-  def reshape(newShape: Shape with newShape.nbrElems == shape.nbrElems): {res: Tensor[T] with res.shape == newShape}
-```
+But please don't do that

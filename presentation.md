@@ -87,8 +87,6 @@ type PoliteString = NonEmptyString with s =>
 ```scala
 def divideQualified(x: Int, y: Int with y != 0):
   Int with _ * y == x
-
-
 ```
 
 . . .
@@ -100,22 +98,26 @@ def divideContract(x: Int, y: Int): Int = {
 }.ensuring(_ * y == x)
 ```
 
+## Signature and code are mixed
+
+```scala
+def divideQualified(x: Int, y: Int with y != 0):
+  Int with _ * y == x
+```
+
 . . .
 
-Signature and code are mixed: `divideContract` cannot be abstract !
-
-::: notes
-
-Separation of signature and code
-
-Thus allows implementation to be abstract
-
-:::
+```scala
+def divideContract(x: Int, y: Int): Int = {
+  require(y != 0)
+  ???
+}.ensuring(_ * y == x)
+```
 
 ## Re-use predicates
 
 ```scala
-type NonZero = Int with y != 0
+type NonZero = Int with _ != 0
 def divideQualified(x: Int, y: NonZero):
   Int with _ * y == x
 ```
@@ -130,10 +132,13 @@ def divideContract(x: Int, y: Int): Int = {
 }.ensuring(_ * y == x)
 ```
 
-. . .
+::: notes
 
-Still need to add a `require` and refer to `y`
+Separation of signature and code
 
+Thus allows implementation to be abstract
+
+:::
 
 ## Predicate polymorphism
 
@@ -166,7 +171,9 @@ Powerful thanks to polymorphism
 
 ## The compiler
 
+::: fragment
 Main phases:
+:::
 
 ::: incremental
 
@@ -183,9 +190,14 @@ Main phases:
 
 Trying to make qualified types approachable:
 
+::: incremental
 * Finding a friendly syntax
+  * 2 implemented syntaxes
+  * 1 proposed syntax
 * Runtime checks & Pattern matching
-
+  * `isInstanceOf`, `asInstanceOf`
+  * comparison with pattern guards
+:::
 . . .
 
 Even without a solver, that's already enough for some applications !
@@ -223,6 +235,10 @@ TODO: Is it important to show the internal representation ?
 ## Consensus
 
 ::: fragment
+_Naming is hard_ => Don't do it if you don't have to
+:::
+
+. . .
 
 Boolean expressions:
 ```scala
@@ -230,19 +246,12 @@ type Trivial = Int with true
 type Empty   = Int with false
 ```
 
-:::
-
 . . .
 
 Available identifiers:
 ```scala
 def foo(x: Int with x > 0, y: Int with y > x): Int = y - x
 ```
-
-::: notes
-
-But this doesn't work for the return type
-:::
 
 ## Postfix Lambda
 
@@ -623,7 +632,7 @@ type PoliteString = NonEmptyString with s => s.head.isUpper &&
 ```
 
 ::: notes
-Draw your attention to `s.head`
+Draw attention to `s.head`
 :::
 
 
@@ -706,14 +715,14 @@ def logSafe(x: Int) = x match
 ::: incremental
 
 * Implemented syntaxes
-* * postfix lambda: `Int with _ > 0`
-* * set notation: `{x: Int with x > 0}`
-* Proposed syntax
-* * `it`: `Int with it > 0`
-* * `id`: `(x: Int) with x > 0`
-* * And potentially `if` as keyword
+  * postfix lambda: `Int with _ > 0`
+  * set notation: `{x: Int with x > 0}`
+  Proposed syntax
+  * `it`: `Int with it > 0`
+  * `id`: `(x: Int) with x > 0`
+  * And potentially `if` as keyword
 * Pattern matching:
-* * qualified types as "compiletime pattern guards"
+  * qualified types as "compiletime pattern guards"
 
 :::
 
@@ -798,6 +807,13 @@ trait Tensor[T]:
     {res: Tensor[T] with res.shape == newShape}
 ```
 
+## `this` doesn't work
+
+```scala
+trait Tensor[T]:
+  def add(t: Tensor[T] with t.sameShape(Tensor.this)):
+    Tensor[T] with this.sameShape(Tensor.this)
+```
 
 ## Overloading Resolution
 

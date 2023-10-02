@@ -4,7 +4,6 @@
   <meta charset="utf-8">
   <meta name="generator" content="pandoc">
   <meta name="author" content="Quentin Bernet @LARA, EPFL">
-  <meta name="dcterms.date" content="2023-09-28">
   <title>Syntax and Runtime Checks for Qualified Types in Scala 3</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -59,7 +58,7 @@ Scala 3</h1>
   <p class="author"><a href="mailto:quentin.bernet@epfl.ch">Quentin
 Bernet</a> @<a href="https://lara.epfl.ch/w/">LARA</a>, <a
 href="https://www.epfl.ch/fr/">EPFL</a></p>
-  <p class="date">September 28, 2023</p>
+  <p class="date">Oktober 2, 2023</p>
 </section>
 
 <section id="slides" class="title-slide slide level1">
@@ -119,27 +118,28 @@ class="math inline">\{x \in \mathbb{Z}\;|\;x &gt; 0\}</span></p>
 <section id="why-not-contracts" class="slide level2">
 <h2>Why not contracts ?</h2>
 <pre class="scala"><code>def divideQualified(x: Int, y: Int with y != 0):
-  Int with _ * y == x
-
-</code></pre>
+  Int with _ * y == x</code></pre>
 <div class="fragment">
 <pre class="scala"><code>def divideContract(x: Int, y: Int): Int = {
   require(y != 0)
   ???
 }.ensuring(_ * y == x)</code></pre>
 </div>
+</section>
+<section id="signature-and-code-are-mixed" class="slide level2">
+<h2>Signature and code are mixed</h2>
+<pre class="scala"><code>def divideQualified(x: Int, y: Int with y != 0):
+  Int with _ * y == x</code></pre>
 <div class="fragment">
-<p>Signature and code are mixed: <code>divideContract</code> cannot be
-abstract !</p>
-<aside class="notes">
-<p>Separation of signature and code</p>
-<p>Thus allows implementation to be abstract</p>
-</aside>
+<pre class="scala"><code>def divideContract(x: Int, y: Int): Int = {
+  require(y != 0)
+  ???
+}.ensuring(_ * y == x)</code></pre>
 </div>
 </section>
 <section id="re-use-predicates" class="slide level2">
 <h2>Re-use predicates</h2>
-<pre class="scala"><code>type NonZero = Int with y != 0
+<pre class="scala"><code>type NonZero = Int with _ != 0
 def divideQualified(x: Int, y: NonZero):
   Int with _ * y == x</code></pre>
 <div class="fragment">
@@ -148,10 +148,10 @@ def divideContract(x: Int, y: Int): Int = {
   require(nonZero(y))
   ???
 }.ensuring(_ * y == x)</code></pre>
-</div>
-<div class="fragment">
-<p>Still need to add a <code>require</code> and refer to
-<code>y</code></p>
+<aside class="notes">
+<p>Separation of signature and code</p>
+<p>Thus allows implementation to be abstract</p>
+</aside>
 </div>
 </section>
 <section id="predicate-polymorphism" class="slide level2">
@@ -175,7 +175,9 @@ def smallestPos(l: List[Pos]) = smallest(l)</code></pre>
 </section>
 <section id="the-compiler" class="slide level2">
 <h2>The compiler</h2>
+<div class="fragment">
 <p>Main phases:</p>
+</div>
 <div>
 <ul>
 <li class="fragment">Parser</li>
@@ -190,10 +192,21 @@ def smallestPos(l: List[Pos]) = smallest(l)</code></pre>
 <section id="our-work" class="title-slide slide level1">
 <h1>Our work</h1>
 <p>Trying to make qualified types approachable:</p>
+<div>
 <ul>
-<li>Finding a friendly syntax</li>
-<li>Runtime checks &amp; Pattern matching</li>
+<li class="fragment">Finding a friendly syntax
+<ul>
+<li class="fragment">2 implemented syntaxes</li>
+<li class="fragment">1 proposed syntax</li>
+</ul></li>
+<li class="fragment">Runtime checks &amp; Pattern matching
+<ul>
+<li class="fragment"><code>isInstanceOf</code>,
+<code>asInstanceOf</code></li>
+<li class="fragment">comparison with pattern guards</li>
+</ul></li>
 </ul>
+</div>
 <div class="fragment">
 <p>Even without a solver, that’s already enough for some applications
 !</p>
@@ -223,6 +236,9 @@ def smallestPos(l: List[Pos]) = smallest(l)</code></pre>
 <section id="consensus" class="slide level2">
 <h2>Consensus</h2>
 <div class="fragment">
+<p><em>Naming is hard</em> =&gt; Don’t do it if you don’t have to</p>
+</div>
+<div class="fragment">
 <p>Boolean expressions:</p>
 <pre class="scala"><code>type Trivial = Int with true
 type Empty   = Int with false</code></pre>
@@ -230,9 +246,6 @@ type Empty   = Int with false</code></pre>
 <div class="fragment">
 <p>Available identifiers:</p>
 <pre class="scala"><code>def foo(x: Int with x &gt; 0, y: Int with y &gt; x): Int = y - x</code></pre>
-<aside class="notes">
-<p>But this doesn’t work for the return type</p>
-</aside>
 </div>
 </section>
 <section id="postfix-lambda" class="slide level2">
@@ -499,7 +512,7 @@ then ...</code></pre>
 type PoliteString = NonEmptyString with s =&gt; s.head.isUpper &amp;&amp;
                                              s.takeRight(6) == &quot;please&quot;</code></pre>
 <aside class="notes">
-<p>Draw your attention to <code>s.head</code></p>
+<p>Draw attention to <code>s.head</code></p>
 </aside>
 </div>
 </section>
@@ -565,28 +578,19 @@ def log(x: Nat): Int = ???</code></pre>
 <div class="column">
 <div>
 <ul>
-<li class="fragment">Implemented syntaxes</li>
-<li class="fragment"><ul>
+<li class="fragment">Implemented syntaxes
+<ul>
 <li class="fragment">postfix lambda: <code>Int with _ &gt; 0</code></li>
-</ul></li>
-<li class="fragment"><ul>
-<li class="fragment">set notation:
-<code>{x: Int with x &gt; 0}</code></li>
-</ul></li>
-<li class="fragment">Proposed syntax</li>
-<li class="fragment"><ul>
+<li class="fragment">set notation: <code>{x: Int with x &gt; 0}</code>
+Proposed syntax</li>
 <li class="fragment"><code>it</code>:
 <code>Int with it &gt; 0</code></li>
-</ul></li>
-<li class="fragment"><ul>
 <li class="fragment"><code>id</code>:
 <code>(x: Int) with x &gt; 0</code></li>
-</ul></li>
-<li class="fragment"><ul>
 <li class="fragment">And potentially <code>if</code> as keyword</li>
 </ul></li>
-<li class="fragment">Pattern matching:</li>
-<li class="fragment"><ul>
+<li class="fragment">Pattern matching:
+<ul>
 <li class="fragment">qualified types as “compiletime pattern
 guards”</li>
 </ul></li>
@@ -659,6 +663,12 @@ extension (s: Shape)
 
   def reshape(newShape: Shape with newShape.nbrElems == shape.nbrElems):
     {res: Tensor[T] with res.shape == newShape}</code></pre>
+</section>
+<section id="this-doesnt-work" class="slide level2">
+<h2><code>this</code> doesn’t work</h2>
+<pre class="scala"><code>trait Tensor[T]:
+  def add(t: Tensor[T] with t.sameShape(Tensor.this)):
+    Tensor[T] with this.sameShape(Tensor.this)</code></pre>
 </section>
 <section id="overloading-resolution" class="slide level2">
 <h2>Overloading Resolution</h2>

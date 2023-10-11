@@ -1,6 +1,6 @@
 ---
 title: Syntax and Runtime Checks for Qualified Types in Scala 3
-author: "[Quentin Bernet](mailto:quentin.bernet@epfl.ch) @[LARA](https://lara.epfl.ch/w/), [EPFL](https://www.epfl.ch/fr/)"
+author: "[Quentin Bernet](mailto:quentin.bernet@bluewin.ch) @[LARA](https://lara.epfl.ch/w/), [EPFL](https://www.epfl.ch/fr/)"
 ---
 
 # Slides

@@ -14,7 +14,7 @@ Their source code: [Sporarum/slides-master-project](https://github.com/Sporarum/
 <br>
 <br>
 
-Implementation PRs: [go.epfl.ch/QT-code](go.epfl.ch/QT-code)
+Implementation PRs: [go.epfl.ch/QT-code](https://go.epfl.ch/QT-code)
 
 ::: notes
 
